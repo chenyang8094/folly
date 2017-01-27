@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,7 +197,8 @@ typedef AtomicHashArray<KeyT, ValueT, HashFcn, EqualFcn,
   explicit AtomicHashMap(size_t finalSizeEst, const Config& c = Config());
 
   ~AtomicHashMap() {
-    const int numMaps = numMapsAllocated_.load(std::memory_order_relaxed);
+    const unsigned int numMaps =
+        numMapsAllocated_.load(std::memory_order_relaxed);
     FOR_EACH_RANGE (i, 0, numMaps) {
       SubMap* thisMap = subMaps_[i].load(std::memory_order_relaxed);
       DCHECK(thisMap);

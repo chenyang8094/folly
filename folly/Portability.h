@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,6 +108,12 @@ constexpr bool kHasUnalignedAccess = false;
 #else
 # define FOLLY_PPC64 0
 #endif
+
+namespace folly {
+constexpr bool kIsArchAmd64 = FOLLY_X64 == 1;
+constexpr bool kIsArchAArch64 = FOLLY_A64 == 1;
+constexpr bool kIsArchPPC64 = FOLLY_PPC64 == 1;
+}
 
 // packing is very ugly in msvc
 #ifdef _MSC_VER

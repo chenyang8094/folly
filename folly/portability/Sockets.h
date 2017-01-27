@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ struct sockaddr_un {
 
 // These are the same, but PF_LOCAL
 // isn't defined by WinSock.
+#define AF_LOCAL PF_UNIX
 #define PF_LOCAL PF_UNIX
 
 // This isn't defined by Windows, and we need to

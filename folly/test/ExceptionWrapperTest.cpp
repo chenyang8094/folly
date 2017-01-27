@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,39 +197,41 @@ TEST(ExceptionWrapper, with_exception_test) {
   EXPECT_FALSE(
       empty_ew.with_exception([&](const std::exception& /* ie */) { FAIL(); }));
 
+  // Testing with const exception_wrapper; sanity check first:
+  EXPECT_FALSE(cew.with_exception([&](const std::runtime_error&) {}));
+  EXPECT_FALSE(cew.with_exception([&](const int&) {}));
   // This won't even compile.  You can't use a function which takes a
   // non-const reference with a const exception_wrapper.
-/*
-  cew.with_exception([&](IntException& ie) {
-      SUCCEED();
-    });
-*/
+  /*
+  EXPECT_FALSE(cew.with_exception([&](std::runtime_error&) {}));
+  EXPECT_FALSE(cew.with_exception([&](int&) {}));
+  */
 }
 
-TEST(ExceptionWrapper, getExceptionPtr_test) {
+TEST(ExceptionWrapper, get_or_make_exception_ptr_test) {
   int expected = 23;
 
   // This works, and doesn't slice.
   exception_wrapper ew = try_and_catch<std::exception, std::runtime_error>(
       [=]() { throw IntException(expected); });
-  std::exception_ptr eptr = ew.getExceptionPtr();
+  std::exception_ptr eptr = ew.to_exception_ptr();
   EXPECT_THROW(std::rethrow_exception(eptr), IntException);
 
   // I can try_and_catch a non-copyable base class.  This will use
   // std::exception_ptr internally.
   exception_wrapper ew2 = try_and_catch<AbstractIntException>(
       [=]() { throw IntException(expected); });
-  eptr = ew2.getExceptionPtr();
+  eptr = ew2.to_exception_ptr();
   EXPECT_THROW(std::rethrow_exception(eptr), IntException);
 
   // Test with const this.
   const exception_wrapper& cew = ew;
-  eptr = cew.getExceptionPtr();
+  eptr = cew.to_exception_ptr();
   EXPECT_THROW(std::rethrow_exception(eptr), IntException);
 
   // Test with empty ew.
   exception_wrapper empty_ew;
-  eptr = empty_ew.getExceptionPtr();
+  eptr = empty_ew.to_exception_ptr();
   EXPECT_FALSE(eptr);
 }
 
@@ -282,6 +284,7 @@ TEST(ExceptionWrapper, non_std_exception_test) {
     });
   EXPECT_TRUE(bool(ew));
   EXPECT_FALSE(ew.is_compatible_with<std::exception>());
+  EXPECT_TRUE(ew.is_compatible_with<int>());
   EXPECT_EQ(ew.what(), kIntClassName);
   EXPECT_EQ(ew.class_name(), kIntClassName);
   // non-std::exception types are supported, but the only way to

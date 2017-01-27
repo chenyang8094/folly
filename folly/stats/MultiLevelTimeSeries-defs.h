@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ void MultiLevelTimeSeries<VT, CT>::addValue(
     TimePoint now,
     const ValueType& val,
     uint64_t times) {
-  addValueAggregated(now, val * times, times);
+  addValueAggregated(now, val * ValueType(times), times);
 }
 
 template <typename VT, typename CT>

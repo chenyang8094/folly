@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1176,6 +1176,13 @@ TEST(AsyncSocketTest, WriteIOBuf) {
   std::shared_ptr<AsyncSocket> acceptedSocket = server.acceptAsync(&evb);
   ReadCallback rcb;
   acceptedSocket->setReadCB(&rcb);
+
+  // Check if EOR tracking flag can be set and reset.
+  EXPECT_FALSE(socket->isEorTrackingEnabled());
+  socket->setEorTracking(true);
+  EXPECT_TRUE(socket->isEorTrackingEnabled());
+  socket->setEorTracking(false);
+  EXPECT_FALSE(socket->isEorTrackingEnabled());
 
   // Write a simple buffer to the socket
   constexpr size_t simpleBufLength = 5;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1293,6 +1293,15 @@ void swap(Synchronized<T, M>& lhs, Synchronized<T, M>& rhs) {
 }
 
 /**
+ * Disambiguate the name var by concatenating the line number of the original
+ * point of expansion. This avoids shadowing warnings for nested
+ * SYNCHRONIZEDs. The name is consistent if used multiple times within
+ * another macro.
+ * Only for internal use.
+ */
+#define SYNCHRONIZED_VAR(var) FB_CONCATENATE(SYNCHRONIZED_##var##_, __LINE__)
+
+/**
  * SYNCHRONIZED is the main facility that makes Synchronized<T>
  * helpful. It is a pseudo-statement that introduces a scope where the
  * object is locked. Inside that scope you get to access the unadorned
@@ -1318,31 +1327,31 @@ void swap(Synchronized<T, M>& lhs, Synchronized<T, M>& rhs) {
   FOLLY_MSVC_DISABLE_WARNING(4458) /* declaration hides member */     \
   FOLLY_MSVC_DISABLE_WARNING(4459) /* declaration hides global */     \
   FOLLY_GCC_DISABLE_NEW_SHADOW_WARNINGS                               \
-  if (bool SYNCHRONIZED_state = false) {                              \
+  if (bool SYNCHRONIZED_VAR(state) = false) {                         \
   } else                                                              \
-    for (auto SYNCHRONIZED_lockedPtr =                                \
+    for (auto SYNCHRONIZED_VAR(lockedPtr) =                           \
              (FB_VA_GLUE(FB_ARG_2_OR_1, (__VA_ARGS__))).operator->(); \
-         !SYNCHRONIZED_state;                                         \
-         SYNCHRONIZED_state = true)                                   \
+         !SYNCHRONIZED_VAR(state);                                    \
+         SYNCHRONIZED_VAR(state) = true)                              \
       for (auto& FB_VA_GLUE(FB_ARG_1, (__VA_ARGS__)) =                \
-               *SYNCHRONIZED_lockedPtr.operator->();                  \
-           !SYNCHRONIZED_state;                                       \
-           SYNCHRONIZED_state = true)                                 \
+               *SYNCHRONIZED_VAR(lockedPtr).operator->();             \
+           !SYNCHRONIZED_VAR(state);                                  \
+           SYNCHRONIZED_VAR(state) = true)                            \
   FOLLY_POP_WARNING
 
 #define TIMED_SYNCHRONIZED(timeout, ...)                                       \
-  if (bool SYNCHRONIZED_state = false) {                                       \
+  if (bool SYNCHRONIZED_VAR(state) = false) {                                  \
   } else                                                                       \
-    for (auto SYNCHRONIZED_lockedPtr =                                         \
+    for (auto SYNCHRONIZED_VAR(lockedPtr) =                                    \
              (FB_VA_GLUE(FB_ARG_2_OR_1, (__VA_ARGS__))).timedAcquire(timeout); \
-         !SYNCHRONIZED_state;                                                  \
-         SYNCHRONIZED_state = true)                                            \
+         !SYNCHRONIZED_VAR(state);                                             \
+         SYNCHRONIZED_VAR(state) = true)                                       \
       for (auto FB_VA_GLUE(FB_ARG_1, (__VA_ARGS__)) =                          \
-               (!SYNCHRONIZED_lockedPtr                                        \
+               (!SYNCHRONIZED_VAR(lockedPtr)                                   \
                     ? nullptr                                                  \
-                    : SYNCHRONIZED_lockedPtr.operator->());                    \
-           !SYNCHRONIZED_state;                                                \
-           SYNCHRONIZED_state = true)
+                    : SYNCHRONIZED_VAR(lockedPtr).operator->());               \
+           !SYNCHRONIZED_VAR(state);                                           \
+           SYNCHRONIZED_VAR(state) = true)
 
 /**
  * Similar to SYNCHRONIZED, but only uses a read lock.
@@ -1362,38 +1371,20 @@ void swap(Synchronized<T, M>& lhs, Synchronized<T, M>& rhs) {
       (FB_VA_GLUE(FB_ARG_2_OR_1, (__VA_ARGS__))).asConst())
 
 /**
- * Temporarily disables synchronization inside a SYNCHRONIZED block.
- *
- * Note: This macro is deprecated, and kind of broken.  The input parameter
- * does not control what it unlocks--it always unlocks the lock acquired by the
- * most recent SYNCHRONIZED scope.  If you have two nested SYNCHRONIZED blocks,
- * UNSYNCHRONIZED always unlocks the inner-most, even if you pass in the
- * variable name used in the outer SYNCHRONIZED block.
- *
- * This macro will be removed soon in a subsequent diff.
- */
-#define UNSYNCHRONIZED(name)                                             \
-  for (auto SYNCHRONIZED_state3 = SYNCHRONIZED_lockedPtr.scopedUnlock(); \
-       !SYNCHRONIZED_state;                                              \
-       SYNCHRONIZED_state = true)                                        \
-    for (auto& name = *SYNCHRONIZED_state3.getSynchronized();            \
-         !SYNCHRONIZED_state;                                            \
-         SYNCHRONIZED_state = true)
-
-/**
  * Synchronizes two Synchronized objects (they may encapsulate
  * different data). Synchronization is done in increasing address of
  * object order, so there is no deadlock risk.
  */
-#define SYNCHRONIZED_DUAL(n1, e1, n2, e2)                               \
-  if (bool SYNCHRONIZED_state = false) {                                \
-  } else                                                                \
-    for (auto SYNCHRONIZED_ptrs = acquireLockedPair(e1, e2);            \
-         !SYNCHRONIZED_state;                                           \
-         SYNCHRONIZED_state = true)                                     \
-      for (auto& n1 = *SYNCHRONIZED_ptrs.first; !SYNCHRONIZED_state;    \
-           SYNCHRONIZED_state = true)                                   \
-        for (auto& n2 = *SYNCHRONIZED_ptrs.second; !SYNCHRONIZED_state; \
-             SYNCHRONIZED_state = true)
+#define SYNCHRONIZED_DUAL(n1, e1, n2, e2)                                      \
+  if (bool SYNCHRONIZED_VAR(state) = false) {                                  \
+  } else                                                                       \
+    for (auto SYNCHRONIZED_VAR(ptrs) = acquireLockedPair(e1, e2);              \
+         !SYNCHRONIZED_VAR(state);                                             \
+         SYNCHRONIZED_VAR(state) = true)                                       \
+      for (auto& n1 = *SYNCHRONIZED_VAR(ptrs).first; !SYNCHRONIZED_VAR(state); \
+           SYNCHRONIZED_VAR(state) = true)                                     \
+        for (auto& n2 = *SYNCHRONIZED_VAR(ptrs).second;                        \
+             !SYNCHRONIZED_VAR(state);                                         \
+             SYNCHRONIZED_VAR(state) = true)
 
 } /* namespace folly */

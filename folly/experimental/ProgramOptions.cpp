@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,7 +83,9 @@ class GFlagValueSemanticBase : public po::value_semantic {
 
   std::string name() const override { return "arg"; }
 #if BOOST_VERSION >= 105900
-  bool adjacent_tokens_only() const override { return false; }
+  bool adjacent_tokens_only() const {
+    return false;
+  }
 #endif
   bool is_composing() const override { return false; }
   bool is_required() const override { return false; }

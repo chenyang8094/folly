@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -718,7 +718,7 @@ class ConcurrentSkipList<T, Comp, NodeAlloc, MAX_HEIGHT>::Skipper {
     }
     int max_layer = maxLayer();
     for (int i = 0; i < max_layer; ++i) {
-      hints_[i] = i + 1;
+      hints_[i] = uint8_t(i + 1);
     }
     hints_[max_layer] = max_layer;
   }

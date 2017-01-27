@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ int fcntl(int fd, int cmd, ...) {
       if (h != INVALID_HANDLE_VALUE) {
         DWORD flags;
         if (GetHandleInformation(h, &flags)) {
-          res = flags & HANDLE_FLAG_INHERIT;
+          res = int(flags & HANDLE_FLAG_INHERIT);
         }
       }
       break;

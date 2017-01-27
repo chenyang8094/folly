@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,11 +137,13 @@ TEST(FunctionRef, OverloadedFunctor) {
 TEST(FunctionRef, DefaultConstructAndAssign) {
   FunctionRef<int(int, int)> fref;
 
+  EXPECT_FALSE(fref);
   EXPECT_THROW(fref(1, 2), std::bad_function_call);
 
   int (*func)(int, int) = [](int x, int y) { return 10 * x + y; };
   fref = func;
 
+  EXPECT_TRUE(fref);
   EXPECT_EQ(42, fref(4, 2));
 }
 

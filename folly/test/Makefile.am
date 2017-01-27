@@ -201,6 +201,10 @@ atomic_hash_map_test_SOURCES = AtomicHashMapTest.cpp
 atomic_hash_map_test_LDADD = libfollytestmain.la $(top_builddir)/libfollybenchmark.la
 TESTS += atomic_hash_map_test
 
+chrono_test_SOURCES = ChronoTest.cpp
+chrono_test_LDADD = libfollytestmain.la
+TESTS += chrono_test
+
 format_test_SOURCES = FormatTest.cpp
 format_test_LDADD = libfollytestmain.la $(top_builddir)/libfollybenchmark.la
 TESTS += format_test
@@ -249,6 +253,10 @@ try_test_SOURCES = TryTest.cpp
 try_test_LDADD = libfollytestmain.la
 TESTS += try_test
 
+uncaught_exceptions_test_SOURCES = UncaughtExceptionsTest.cpp
+uncaught_exceptions_test_LDADD = libfollytestmain.la
+TESTS += uncaught_exceptions_test
+
 unit_test_SOURCES = UnitTest.cpp
 unit_test_LDADD = libfollytestmain.la
 TESTS += unit_test
@@ -256,7 +264,6 @@ TESTS += unit_test
 futures_test_SOURCES = \
     ../futures/test/CollectTest.cpp \
     ../futures/test/ContextTest.cpp \
-    ../futures/test/ConversionTest.cpp \
     ../futures/test/CoreTest.cpp \
     ../futures/test/EnsureTest.cpp \
     ../futures/test/ExecutorTest.cpp \
@@ -314,5 +321,9 @@ TESTS += partial_test
 singleton_thread_local_test_SOURCES = SingletonThreadLocalTest.cpp
 singleton_thread_local_test_LDADD = libfollytestmain.la
 TESTS += singleton_thread_local_test
+
+utility_test_SOURCES = UtilityTest.cpp
+utility_test_LDADD = libfollytestmain.la
+TESTS += utility_test
 
 check_PROGRAMS += $(TESTS)

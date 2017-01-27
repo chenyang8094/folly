@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,12 @@
 #pragma once
 
 #include <thread>
+#include <type_traits>
+
 #include <pthread.h>
+
 #include <folly/Range.h>
+#include <folly/Traits.h>
 
 namespace folly {
 
@@ -41,8 +45,10 @@ template <typename T>
 inline bool setThreadName(T /* id */, StringPiece /* name */) {
   static_assert(
       std::is_same<T, pthread_t>::value ||
-      std::is_same<T, std::thread::native_handle_type>::value,
-      "type must be pthread_t or std::thread::native_handle_type");
+          std::is_same<T, std::thread::id>::value ||
+          std::is_same<T, std::thread::native_handle_type>::value,
+      "type must be pthread_t, std::thread::id or "
+      "std::thread::native_handle_type");
   return false;
 }
 
@@ -64,6 +70,21 @@ inline bool setThreadName(pthread_t id, StringPiece name) {
   return false;
 }
 #endif
+
+template <
+    typename = folly::_t<std::enable_if<
+        std::is_same<pthread_t, std::thread::native_handle_type>::value>>>
+inline bool setThreadName(std::thread::id id, StringPiece name) {
+  static_assert(
+      sizeof(std::thread::native_handle_type) == sizeof(decltype(id)),
+      "This assumes std::thread::id is a thin wrapper around "
+      "std::thread::native_handle_type, but that doesn't appear to be true.");
+  // In most implementations, std::thread::id is a thin wrapper around
+  // std::thread::native_handle_type, which means we can do unsafe things to
+  // extract it.
+  pthread_t ptid = *reinterpret_cast<pthread_t*>(&id);
+  return setThreadName(ptid, name);
+}
 
 inline bool setThreadName(StringPiece name) {
   return setThreadName(pthread_self(), name);

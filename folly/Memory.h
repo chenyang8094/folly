@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,9 +36,8 @@ namespace folly {
  * @author Xu Ning (xning@fb.com)
  */
 
-#if __cplusplus >= 201402L ||                                              \
-    (defined __cpp_lib_make_unique && __cpp_lib_make_unique >= 201304L) || \
-    (defined(_MSC_VER) && _MSC_VER >= 1900)
+#if __cplusplus >= 201402L || __cpp_lib_make_unique >= 201304L || \
+    (__ANDROID__ && __cplusplus >= 201300L) || _MSC_VER >= 1900
 
 /* using override */ using std::make_unique;
 
@@ -108,11 +107,34 @@ struct static_function_deleter {
  *
  *  Useful when `T` is long, such as:
  *
- *      using T = foobar::cpp2::FooBarServiceAsyncClient;
+ *      using T = foobar::FooBarAsyncClient;
  */
 template <typename T, typename D>
 std::shared_ptr<T> to_shared_ptr(std::unique_ptr<T, D>&& ptr) {
   return std::shared_ptr<T>(std::move(ptr));
+}
+
+/**
+ *  to_weak_ptr
+ *
+ *  Make a weak_ptr and return it from a shared_ptr without specifying the
+ *  template type parameter and letting the compiler deduce it.
+ *
+ *  So you can write this:
+ *
+ *      auto wptr = to_weak_ptr(getSomethingShared<T>());
+ *
+ *  Instead of this:
+ *
+ *      auto wptr = weak_ptr<T>(getSomethingShared<T>());
+ *
+ *  Useful when `T` is long, such as:
+ *
+ *      using T = foobar::FooBarAsyncClient;
+ */
+template <typename T>
+std::weak_ptr<T> to_weak_ptr(const std::shared_ptr<T>& ptr) {
+  return std::weak_ptr<T>(ptr);
 }
 
 using SysBufferDeleter = static_function_deleter<void, ::free>;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include <random>
 
 // This has to come before SSL.
+#include <folly/portability/OpenSSL.h>
 #include <folly/portability/Sockets.h>
 
 #include <openssl/ssl.h>
@@ -282,7 +283,7 @@ class SSLContext {
   virtual std::shared_ptr<PasswordCollector> passwordCollector() {
     return collector_;
   }
-#if OPENSSL_VERSION_NUMBER >= 0x1000105fL && !defined(OPENSSL_NO_TLSEXT)
+#if FOLLY_OPENSSL_HAS_SNI
   /**
    * Provide SNI support
    */
@@ -335,7 +336,7 @@ class SSLContext {
    */
   typedef std::function<void(SSL* ssl)> ClientHelloCallback;
   virtual void addClientHelloCallback(const ClientHelloCallback& cb);
-#endif
+#endif // FOLLY_OPENSSL_HAS_SNI
 
   /**
    * Create an SSL object from this context.
@@ -518,7 +519,7 @@ class SSLContext {
   bool checkPeerName_;
   std::string peerFixedName_;
   std::shared_ptr<PasswordCollector> collector_;
-#if OPENSSL_VERSION_NUMBER >= 0x1000105fL && !defined(OPENSSL_NO_TLSEXT)
+#if FOLLY_OPENSSL_HAS_SNI
   ServerNameCallback serverNameCb_;
   std::vector<ClientHelloCallback> clientHelloCbs_;
 #endif
@@ -552,7 +553,7 @@ class SSLContext {
     SSL* ssl, unsigned char **out, unsigned char *outlen,
     const unsigned char *server, unsigned int server_len, void *args);
 
-#if OPENSSL_VERSION_NUMBER >= 0x1000200fL && !defined(OPENSSL_NO_TLSEXT)
+#if FOLLY_OPENSSL_HAS_ALPN
   static int alpnSelectCallback(SSL* ssl,
                                 const unsigned char** out,
                                 unsigned char* outlen,
@@ -566,7 +567,7 @@ class SSLContext {
 
   static int passwordCallback(char* password, int size, int, void* data);
 
-#if OPENSSL_VERSION_NUMBER >= 0x1000105fL && !defined(OPENSSL_NO_TLSEXT)
+#if FOLLY_OPENSSL_HAS_SNI
   /**
    * The function that will be called directly from openssl
    * in order for the application to get the tlsext_hostname just after

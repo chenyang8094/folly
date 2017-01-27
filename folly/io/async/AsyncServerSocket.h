@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,10 @@
 // Number pulled from 3.10 kernel headers.
 #ifndef SO_REUSEPORT
 #define SO_REUSEPORT 15
+#endif
+
+#if defined __linux__ && !defined SO_NO_TRANSPARENT_TLS
+#define SO_NO_TRANSPARENT_TLS 200
 #endif
 
 namespace folly {
@@ -679,6 +683,13 @@ class AsyncServerSocket : public DelayedDestruction
   }
 
   /**
+   * Do not attempt the transparent TLS handshake
+   */
+  void disableTransparentTls() {
+    noTransparentTls_ = true;
+  }
+
+  /**
    * Get whether or not the socket is accepting new connections
    */
   bool getAccepting() const {
@@ -859,6 +870,7 @@ class AsyncServerSocket : public DelayedDestruction
   bool reusePortEnabled_{false};
   bool closeOnExec_;
   bool tfo_{false};
+  bool noTransparentTls_{false};
   uint32_t tfoMaxQueueSize_{0};
   ShutdownSocketSet* shutdownSocketSet_;
   ConnectionEventCallback* connectionEventCallback_{nullptr};

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include <cmath>
 
 #include <folly/experimental/Bits.h>
 
@@ -246,7 +248,7 @@ T testValue(int bits) {
   if (std::is_signed<T>::value) {
     --bits;
   }
-  auto value = pow(2, bits) * (negate ? -2.0 : 2.0) / 3.0;
+  auto value = std::pow(2, bits) * (negate ? -2.0 : 2.0) / 3.0;
   CHECK_GE(value, std::numeric_limits<T>::min());
   CHECK_LE(value, std::numeric_limits<T>::max());
   return static_cast<T>(value);

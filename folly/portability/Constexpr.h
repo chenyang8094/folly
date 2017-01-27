@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ struct constexpr_abs_helper<
         std::is_integral<T>::value && !std::is_same<T, bool>::value &&
         std::is_signed<T>::value>::type> {
   static constexpr typename std::make_unsigned<T>::type go(T t) {
-    return t < static_cast<T>(0) ? -t : t;
+    return typename std::make_unsigned<T>::type(t < static_cast<T>(0) ? -t : t);
   }
 };
 } // namespace detail

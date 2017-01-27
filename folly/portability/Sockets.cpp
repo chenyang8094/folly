@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ int inet_aton(const char* cp, struct in_addr* inp) {
 }
 
 const char* inet_ntop(int af, const void* src, char* dst, socklen_t size) {
-  return ::inet_ntop(af, (char*)src, dst, size);
+  return ::inet_ntop(af, (char*)src, dst, size_t(size));
 }
 
 int listen(int s, int backlog) {

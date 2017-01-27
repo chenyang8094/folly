@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,8 +89,8 @@ CIDRNetwork IPAddress::createNetwork(StringPiece ipSlashCidr,
         "'"));
   }
   IPAddress subnet(vec.at(0));
-  uint8_t cidr =
-      (defaultCidr > -1) ? uint8_t(defaultCidr) : (subnet.isV4() ? 32 : 128);
+  auto cidr =
+      uint8_t((defaultCidr > -1) ? defaultCidr : (subnet.isV4() ? 32 : 128));
 
   if (elemCount == 2) {
     try {

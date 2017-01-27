@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -362,7 +362,7 @@ class FiberManager : public ::folly::Executor {
   FiberTailQueue readyFibers_; /**< queue of fibers ready to be executed */
   FiberTailQueue yieldedFibers_; /**< queue of fibers which have yielded
                                       execution */
-  FiberTailQueue fibersPool_; /**< pool of unitialized Fiber objects */
+  FiberTailQueue fibersPool_; /**< pool of uninitialized Fiber objects */
 
   GlobalFiberTailQueue allFibers_; /**< list of all Fiber objects owned */
 

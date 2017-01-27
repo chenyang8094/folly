@@ -130,8 +130,18 @@ if test "$folly_cv_prog_cc_glog" != "yes"; then
 fi
 FB_CHECK_PKG_CONFIG([GLOG], [libglog])
 
-AX_CHECK_OPENSSL([],
-        [AC_MSG_ERROR(["Error: libssl required"])])
+AS_IF(
+  [test "x$OPENSSL_INCLUDES" = "x"],
+  [
+    AX_CHECK_OPENSSL([], [AC_MSG_ERROR(["Error: libssl required"])])
+  ],
+  [
+    # AX_CHECK_OPENSSL doesn't seem to play nice with builds started
+    # via build/bootstrap-osx-homebrew.sh
+    AC_MSG_WARN(["Using existing OpenSSL flags from environment."])
+    PKG_CXXFLAGS="$PKG_CXXFLAGS $OPENSSL_INCLUDES"
+  ]
+)
 FB_CHECK_PKG_CONFIG([OPENSSL], [openssl])
 
 # check for boost libs
@@ -581,15 +591,7 @@ AC_CHECK_HEADERS([libdwarf/dwarf.h dwarf.h], [break])
 have_libdwarf=no
 AS_IF([test "x${ac_cv_header_libdwarf_dwarf_h}" = xyes], [have_libdwarf=yes])
 AS_IF([test "x${ac_cv_header_dwarf_h}" = xyes], [have_libdwarf=yes])
-if test "x${follytestmain}" = "xyes"; then
-   AS_IF([test "x${have_libdwarf}" = xno], [AC_MSG_ERROR([Please install libdwarf development library and headers])])
-   AC_CHECK_HEADERS([elf.h],, AC_MSG_ERROR([Please install libelf development package]))
-   AC_CHECK_HEADERS([libunwind.h],, AC_MSG_ERROR([Please install libunwind development package]))
-else
-   AS_IF([test "x${have_libdwarf}" = xno],, [use_follytestmain=no])
-   AC_CHECK_HEADERS([elf.h],, [use_follytestmain=no])
-   AC_CHECK_HEADERS([libunwind.h],, [use_follytestmain=no])
-fi
+
 
 AC_ARG_ENABLE([mobile],
    AS_HELP_STRING([--enable-mobile],
@@ -602,7 +604,7 @@ AS_IF([test "x${mobile}" = "xyes"], [
 
 # Include directory that contains "folly" so #include <folly/Foo.h> works
 AM_CPPFLAGS='-I$(top_srcdir)/..'
-AM_CPPFLAGS="$AM_CPPFLAGS $BOOST_CPPFLAGS"
+AM_CPPFLAGS="$AM_CPPFLAGS $BOOST_CPPFLAGS $OPENSSL_INCLUDES"
 AM_LDFLAGS="$AM_LDFLAGS $BOOST_CONTEXT_LIB $BOOST_PROGRAM_OPTIONS_LIB"
 AM_LDFLAGS="$AM_LDFLAGS $BOOST_THREAD_LIB $BOOST_FILESYSTEM_LIB"
 AM_LDFLAGS="$AM_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_REGEX_LIB -lpthread"
@@ -624,6 +626,7 @@ AM_CONDITIONAL([HAVE_BITS_FUNCTEXCEPT_H], [test "$ac_cv_header_bits_functexcept_
 AM_CONDITIONAL([HAVE_EXTRANDOM_SFMT19937],
                [test "$folly_cv_prog_cc_have_extrandom_sfmt19937" = "yes"])
 AM_CONDITIONAL([FOLLY_TESTMAIN], [test "x${use_follytestmain}" = "xyes"])
+AM_CONDITIONAL([HAVE_LIBDWARF], [test "x${have_libdwarf}" = "xyes"])
 AM_CONDITIONAL([HAVE_BOOST_CONTEXT], [test "x${ax_cv_boost_context}" = "xyes"])
 
 # remove pkg-config deps from dependent libraries

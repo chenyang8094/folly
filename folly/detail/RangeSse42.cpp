@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ size_t qfind_first_byte_of_needles16(const StringPieceLite haystack,
   auto index =
       _mm_cmpestri(arr2, int(needles.size()), arr1, int(haystack.size()), 0);
   if (index < 16) {
-    return index;
+    return size_t(index);
   }
 
   // Now, we can do aligned loads hereafter...

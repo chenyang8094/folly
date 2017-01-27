@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,14 +106,14 @@ std::vector<T> cornerValues() {
   std::vector<T> rv;
   for (T i = 1; i < 24; ++i) {
     rv.push_back(i);
-    rv.push_back(std::numeric_limits<T>::max() / i);
-    rv.push_back(std::numeric_limits<T>::max() - i);
-    rv.push_back(std::numeric_limits<T>::max() / 2 - i);
+    rv.push_back(T(std::numeric_limits<T>::max() / i));
+    rv.push_back(T(std::numeric_limits<T>::max() - i));
+    rv.push_back(T(std::numeric_limits<T>::max() / T(2) - i));
     if (std::is_signed<T>::value) {
       rv.push_back(-i);
-      rv.push_back(std::numeric_limits<T>::min() / i);
-      rv.push_back(std::numeric_limits<T>::min() + i);
-      rv.push_back(std::numeric_limits<T>::min() / 2 + i);
+      rv.push_back(T(std::numeric_limits<T>::min() / i));
+      rv.push_back(T(std::numeric_limits<T>::min() + i));
+      rv.push_back(T(std::numeric_limits<T>::min() / T(2) + i));
     }
   }
   return rv;

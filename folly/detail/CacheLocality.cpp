@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ static CacheLocality getSystemLocalityInfo() {
     // wiggle room
     numCpus = 32;
   }
-  return CacheLocality::uniform(numCpus);
+  return CacheLocality::uniform(size_t(numCpus));
 }
 
 template <>

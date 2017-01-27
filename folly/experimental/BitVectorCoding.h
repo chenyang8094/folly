@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ struct BitVectorEncoder {
     if (begin == end) {
       return MutableCompressedList();
     }
-    BitVectorEncoder encoder(end - begin, *(end - 1));
+    BitVectorEncoder encoder(size_t(end - begin), *(end - 1));
     for (; begin != end; ++begin) {
       encoder.add(*begin);
     }

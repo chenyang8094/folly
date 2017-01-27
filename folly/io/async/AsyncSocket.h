@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +63,10 @@ namespace folly {
  * timeout, since most callers want to give up if the remote end stops
  * responding and no further progress can be made sending the data.
  */
+
+#if defined __linux__ && !defined SO_NO_TRANSPARENT_TLS
+#define SO_NO_TRANSPARENT_TLS 200
+#endif
 
 #ifdef _MSC_VER
 // We do a dynamic_cast on this, in
@@ -388,9 +392,13 @@ class AsyncSocket : virtual public AsyncTransportWrapper {
   void getPeerAddress(
     folly::SocketAddress* address) const override;
 
-  bool isEorTrackingEnabled() const override { return false; }
+  bool isEorTrackingEnabled() const override {
+    return trackEor_;
+  }
 
-  void setEorTracking(bool /*track*/) override {}
+  void setEorTracking(bool track) override {
+    trackEor_ = track;
+  }
 
   bool connecting() const override {
     return (state_ == StateEnum::CONNECTING);
@@ -560,6 +568,10 @@ class AsyncSocket : virtual public AsyncTransportWrapper {
 #if FOLLY_ALLOW_TFO
     tfoEnabled_ = true;
 #endif
+  }
+
+  void disableTransparentTls() {
+    noTransparentTls_ = true;
   }
 
   enum class StateEnum : uint8_t {
@@ -949,6 +961,9 @@ class AsyncSocket : virtual public AsyncTransportWrapper {
   bool tfoEnabled_{false};
   bool tfoAttempted_{false};
   bool tfoFinished_{false};
+  bool noTransparentTls_{false};
+  // Whether to track EOR or not.
+  bool trackEor_{false};
 
   std::unique_ptr<EvbChangeCallback> evbChangeCb_{nullptr};
 };

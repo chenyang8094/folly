@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@
 #include <exception>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
 #include <folly/ExceptionString.h>
 #include <folly/FBString.h>
-#include <folly/detail/ExceptionWrapper.h>
+#include <folly/Traits.h>
 
 namespace folly {
 
@@ -62,8 +63,9 @@ namespace folly {
  * can test or extract a pointer to a specific exception type with very little
  * overhead.
  *
- * Example usage:
- *
+ * \par Example usage:
+ * \par
+ * \code
  * exception_wrapper globalExceptionWrapper;
  *
  * // Thread1
@@ -101,25 +103,24 @@ namespace folly {
  *       }) ||
  *   LOG(FATAL) << "Unrecognized exception";
  * }
+ * \endcode
  *
  */
 class exception_wrapper {
- protected:
-  template <typename Ex>
-  struct optimize;
+ private:
+  template <typename T>
+  using is_exception_ = std::is_base_of<std::exception, T>;
 
  public:
   exception_wrapper() = default;
 
-  // Implicitly construct an exception_wrapper from a qualifying exception.
-  // See the optimize struct for details.
-  template <typename Ex, typename =
-    typename std::enable_if<optimize<typename std::decay<Ex>::type>::value>
-    ::type>
+  template <
+      typename Ex,
+      typename DEx = _t<std::decay<Ex>>,
+      typename = _t<std::enable_if<is_exception_<DEx>::value>>,
+      typename = decltype(DEx(std::forward<Ex>(std::declval<Ex&&>())))>
   /* implicit */ exception_wrapper(Ex&& exn) {
-    typedef typename std::decay<Ex>::type DEx;
-    item_ = std::make_shared<DEx>(std::forward<Ex>(exn));
-    throwfn_ = folly::detail::Thrower<DEx>::doThrow;
+    assign_sptr<DEx>(std::forward<Ex>(exn));
   }
 
   // The following two constructors are meant to emulate the behavior of
@@ -189,72 +190,36 @@ class exception_wrapper {
 
   template <class Ex>
   bool is_compatible_with() const {
-    if (item_) {
-      return dynamic_cast<const Ex*>(item_.get());
-    } else if (eptr_) {
-      try {
-        std::rethrow_exception(eptr_);
-      } catch (typename std::decay<Ex>::type&) {
-        return true;
-      } catch (...) {
-        // fall through
-      }
-    }
-    return false;
+    return with_exception<Ex>([](const Ex&) {});
   }
 
   template <class F>
   bool with_exception(F&& f) {
-    using arg_type = typename functor_traits<F>::arg_type_decayed;
+    using arg_type = _t<std::decay<typename functor_traits<F>::arg_type>>;
     return with_exception<arg_type>(std::forward<F>(f));
   }
 
   template <class F>
   bool with_exception(F&& f) const {
-    using arg_type = typename functor_traits<F>::arg_type_decayed;
-    return with_exception<const arg_type>(std::forward<F>(f));
+    using arg_type = _t<std::decay<typename functor_traits<F>::arg_type>>;
+    return with_exception<arg_type>(std::forward<F>(f));
   }
 
   // If this exception wrapper wraps an exception of type Ex, with_exception
   // will call f with the wrapped exception as an argument and return true, and
   // will otherwise return false.
   template <class Ex, class F>
-  typename std::enable_if<
-    std::is_base_of<std::exception, typename std::decay<Ex>::type>::value,
-    bool>::type
-  with_exception(F f) {
-    return with_exception1<typename std::decay<Ex>::type>(f, this);
+  bool with_exception(F f) {
+    return with_exception1<_t<std::decay<Ex>>>(std::forward<F>(f), this);
   }
 
   // Const overload
   template <class Ex, class F>
-  typename std::enable_if<
-    std::is_base_of<std::exception, typename std::decay<Ex>::type>::value,
-    bool>::type
-  with_exception(F f) const {
-    return with_exception1<const typename std::decay<Ex>::type>(f, this);
+  bool with_exception(F f) const {
+    return with_exception1<_t<std::decay<Ex>>>(std::forward<F>(f), this);
   }
 
-  // Overload for non-exceptions. Always rethrows.
-  template <class Ex, class F>
-  typename std::enable_if<
-    !std::is_base_of<std::exception, typename std::decay<Ex>::type>::value,
-    bool>::type
-  with_exception(F f) const {
-    try {
-      if (*this) {
-        throwException();
-      }
-    } catch (typename std::decay<Ex>::type& e) {
-      f(e);
-      return true;
-    } catch (...) {
-      // fall through
-    }
-    return false;
-  }
-
-  std::exception_ptr getExceptionPtr() const {
+  std::exception_ptr to_exception_ptr() const {
     if (eptr_) {
       return eptr_;
     }
@@ -269,20 +234,27 @@ class exception_wrapper {
     return std::exception_ptr();
   }
 
-protected:
-  template <typename Ex>
-  struct optimize {
-    static const bool value =
-      std::is_base_of<std::exception, Ex>::value &&
-      std::is_copy_assignable<Ex>::value &&
-      !std::is_abstract<Ex>::value;
-  };
+ private:
+  template <typename Ex, typename... Args>
+  void assign_sptr(Args&&... args) {
+    this->item_ = std::make_shared<Ex>(std::forward<Args>(args)...);
+    this->throwfn_ = Thrower<Ex>::doThrow;
+  }
 
   template <typename Ex>
-  void assign_eptr(std::exception_ptr eptr, Ex& e) {
+  _t<std::enable_if<is_exception_<Ex>::value>> assign_eptr(
+      std::exception_ptr eptr,
+      Ex& e) {
     this->eptr_ = eptr;
-    this->estr_ = exceptionStr(e).toStdString();
-    this->ename_ = demangle(typeid(e)).toStdString();
+    this->eobj_ = &const_cast<_t<std::remove_const<Ex>>&>(e);
+  }
+
+  template <typename Ex>
+  _t<std::enable_if<!is_exception_<Ex>::value>> assign_eptr(
+      std::exception_ptr eptr,
+      Ex& e) {
+    this->eptr_ = eptr;
+    this->etype_ = &typeid(e);
   }
 
   void assign_eptr(std::exception_ptr eptr) {
@@ -293,19 +265,19 @@ protected:
   // store a copy of the concrete type, and a helper function so we
   // can rethrow it.
   std::shared_ptr<std::exception> item_;
-  void (*throwfn_)(std::exception*){nullptr};
+  void (*throwfn_)(std::exception&){nullptr};
   // Fallback case: store the library wrapper, which is less efficient
   // but gets the job done.  Also store exceptionPtr() the name of the
   // exception type, so we can at least get those back out without
   // having to rethrow.
   std::exception_ptr eptr_;
-  std::string estr_;
-  std::string ename_;
+  std::exception* eobj_{nullptr};
+  const std::type_info* etype_{nullptr};
 
   template <class T, class... Args>
   friend exception_wrapper make_exception_wrapper(Args&&... args);
 
-private:
+ private:
   template <typename F>
   struct functor_traits {
     template <typename T>
@@ -314,26 +286,47 @@ private:
     struct impl<R(C::*)(A)> { using arg_type = A; };
     template <typename C, typename R, typename A>
     struct impl<R(C::*)(A) const> { using arg_type = A; };
-    using functor_decayed = typename std::decay<F>::type;
-    using functor_op = decltype(&functor_decayed::operator());
+    using functor_op = decltype(&_t<std::decay<F>>::operator());
     using arg_type = typename impl<functor_op>::arg_type;
-    using arg_type_decayed = typename std::decay<arg_type>::type;
   };
+
+  template <class T>
+  class Thrower {
+   public:
+    static void doThrow(std::exception& obj) {
+      throw static_cast<T&>(obj);
+    }
+  };
+
+  template <typename T, typename F>
+  static _t<std::enable_if<is_exception_<T>::value, T*>>
+  try_dynamic_cast_exception(F* from) {
+    return dynamic_cast<T*>(from);
+  }
+  template <typename T, typename F>
+  static _t<std::enable_if<!is_exception_<T>::value, T*>>
+  try_dynamic_cast_exception(F*) {
+    return nullptr;
+  }
 
   // What makes this useful is that T can be exception_wrapper* or
   // const exception_wrapper*, and the compiler will use the
   // instantiation which works with F.
   template <class Ex, class F, class T>
   static bool with_exception1(F f, T* that) {
-    if (that->item_) {
-      if (auto ex = dynamic_cast<Ex*>(that->item_.get())) {
+    using CEx = _t<std::conditional<std::is_const<T>::value, const Ex, Ex>>;
+    if (is_exception_<Ex>::value &&
+        (that->item_ || (that->eptr_ && that->eobj_))) {
+      auto raw =
+          that->item_ ? that->item_.get() : that->eptr_ ? that->eobj_ : nullptr;
+      if (auto ex = try_dynamic_cast_exception<CEx>(raw)) {
         f(*ex);
         return true;
       }
     } else if (that->eptr_) {
       try {
         std::rethrow_exception(that->eptr_);
-      } catch (Ex& e) {
+      } catch (CEx& e) {
         f(e);
         return true;
       } catch (...) {
@@ -344,15 +337,14 @@ private:
   }
 };
 
-template <class T, class... Args>
+template <class Ex, class... Args>
 exception_wrapper make_exception_wrapper(Args&&... args) {
   exception_wrapper ew;
-  ew.item_ = std::make_shared<T>(std::forward<Args>(args)...);
-  ew.throwfn_ = folly::detail::Thrower<T>::doThrow;
+  ew.assign_sptr<Ex>(std::forward<Args>(args)...);
   return ew;
 }
 
-// For consistency with exceptionStr() functions in String.h
+// For consistency with exceptionStr() functions in ExceptionString.h
 fbstring exceptionStr(const exception_wrapper& ew);
 
 /*
@@ -395,60 +387,42 @@ fbstring exceptionStr(const exception_wrapper& ew);
  * });
  */
 
-template <typename... Exceptions>
-class try_and_catch;
+namespace try_and_catch_detail {
 
-template <typename LastException, typename... Exceptions>
-class try_and_catch<LastException, Exceptions...> :
-    public try_and_catch<Exceptions...> {
- public:
-  template <typename F>
-  explicit try_and_catch(F&& fn) : Base() {
-    call_fn(fn);
+template <typename... Args>
+using is_wrap_ctor = std::is_constructible<exception_wrapper, Args...>;
+
+template <typename Ex>
+inline _t<std::enable_if<!is_wrap_ctor<Ex&>::value, exception_wrapper>> make(
+    Ex& ex) {
+  return exception_wrapper(std::current_exception(), ex);
+}
+
+template <typename Ex>
+inline _t<std::enable_if<is_wrap_ctor<Ex&>::value, exception_wrapper>> make(
+    Ex& ex) {
+  return typeid(Ex&) == typeid(ex)
+      ? exception_wrapper(ex)
+      : exception_wrapper(std::current_exception(), ex);
+}
+
+template <typename F>
+inline exception_wrapper impl(F&& f) {
+  return (f(), exception_wrapper());
+}
+
+template <typename F, typename Ex, typename... Exs>
+inline exception_wrapper impl(F&& f) {
+  try {
+    return impl<F, Exs...>(std::forward<F>(f));
+  } catch (Ex& ex) {
+    return make(ex);
   }
+}
+} // try_and_catch_detail
 
- protected:
-  typedef try_and_catch<Exceptions...> Base;
-
-  try_and_catch() : Base() {}
-
-  template <typename Ex>
-  typename std::enable_if<!exception_wrapper::optimize<Ex>::value>::type
-  assign_exception(Ex& e, std::exception_ptr eptr) {
-    exception_wrapper::assign_eptr(eptr, e);
-  }
-
-  template <typename Ex>
-  typename std::enable_if<exception_wrapper::optimize<Ex>::value>::type
-  assign_exception(Ex& e, std::exception_ptr /*eptr*/) {
-    this->item_ = std::make_shared<Ex>(e);
-    this->throwfn_ = folly::detail::Thrower<Ex>::doThrow;
-  }
-
-  template <typename F>
-  void call_fn(F&& fn) {
-    try {
-      Base::call_fn(std::move(fn));
-    } catch (LastException& e) {
-      if (typeid(e) == typeid(LastException&)) {
-        assign_exception(e, std::current_exception());
-      } else {
-        exception_wrapper::assign_eptr(std::current_exception(), e);
-      }
-    }
-  }
-};
-
-template<>
-class try_and_catch<> : public exception_wrapper {
- public:
-  try_and_catch() = default;
-
- protected:
-  template <typename F>
-  void call_fn(F&& fn) {
-    fn();
-  }
-};
-
+template <typename... Exceptions, typename F>
+exception_wrapper try_and_catch(F&& fn) {
+  return try_and_catch_detail::impl<F, Exceptions...>(std::forward<F>(fn));
+}
 } // folly

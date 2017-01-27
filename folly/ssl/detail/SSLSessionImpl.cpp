@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 
 #include <folly/ssl/detail/SSLSessionImpl.h>
-#include <folly/ssl/detail/OpenSSLVersionFinder.h>
+#include <folly/portability/OpenSSL.h>
+#include <folly/ssl/OpenSSLVersionFinder.h>
 
 namespace folly {
 namespace ssl {
@@ -57,7 +58,7 @@ std::string SSLSessionImpl::serialize(void) const {
   auto len = i2d_SSL_SESSION(session_, nullptr);
 
   if (len > 0) {
-    std::unique_ptr<unsigned char[]> uptr(new unsigned char[len]);
+    std::unique_ptr<unsigned char[]> uptr(new unsigned char[size_t(len)]);
     auto p = uptr.get();
     auto written = i2d_SSL_SESSION(session_, &p);
     if (written <= 0) {
@@ -74,12 +75,7 @@ std::string SSLSessionImpl::getSessionID() const {
   if (session_) {
     const unsigned char* ptr = nullptr;
     unsigned int len = 0;
-#if defined(OPENSSL_IS_102) || defined(OPENSSL_IS_101)
-    len = session_->session_id_length;
-    ptr = session_->session_id;
-#elif defined(OPENSSL_IS_110) || defined(OPENSSL_IS_BORINGSSL)
     ptr = SSL_SESSION_get_id(session_, &len);
-#endif
     ret.assign(ptr, ptr + len);
   }
   return ret;
@@ -96,11 +92,7 @@ SSL_SESSION* SSLSessionImpl::getRawSSLSessionDangerous() {
 
 void SSLSessionImpl::upRef() {
   if (session_) {
-#if defined(OPENSSL_IS_102) || defined(OPENSSL_IS_101)
-    CRYPTO_add(&session_->references, 1, CRYPTO_LOCK_SSL_SESSION);
-#elif defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_110)
     SSL_SESSION_up_ref(session_);
-#endif
   }
 }
 

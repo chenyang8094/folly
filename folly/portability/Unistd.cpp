@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,20 +235,20 @@ unsigned int sleep(unsigned int seconds) {
   return 0;
 }
 
-size_t sysconf(int tp) {
+long sysconf(int tp) {
   switch (tp) {
     case _SC_PAGESIZE: {
       SYSTEM_INFO inf;
       GetSystemInfo(&inf);
-      return (size_t)inf.dwPageSize;
+      return (long)inf.dwPageSize;
     }
     case _SC_NPROCESSORS_ONLN: {
       SYSTEM_INFO inf;
       GetSystemInfo(&inf);
-      return (size_t)inf.dwNumberOfProcessors;
+      return (long)inf.dwNumberOfProcessors;
     }
     default:
-      return (size_t)-1;
+      return -1L;
   }
 }
 
@@ -283,7 +283,7 @@ ssize_t write(int fh, void const* buf, size_t count) {
     }
   }
   auto r = _write(fh, buf, unsigned int(count));
-  if ((r > 0 && r != count) || (r == -1 && errno == ENOSPC)) {
+  if ((r > 0 && size_t(r) != count) || (r == -1 && errno == ENOSPC)) {
     // Writing to a pipe with a full buffer doesn't generate
     // any error type, unless it caused us to write exactly 0
     // bytes, so we have to see if we have a pipe first. We

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,9 +58,12 @@ TEST_F(OpenSSLHashTest, hmac_sha256) {
   auto combined = ByteRange(StringPiece("foobar"));
   HMAC(
       EVP_sha256(),
-      key.data(), key.size(),
-      combined.data(), combined.size(),
-      expected.data(), nullptr);
+      key.data(),
+      int(key.size()),
+      combined.data(),
+      combined.size(),
+      expected.data(),
+      nullptr);
 
   auto out = vector<uint8_t>(32);
   OpenSSLHash::hmac_sha256(range(out), key, buf);

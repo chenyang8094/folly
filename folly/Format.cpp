@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -168,7 +168,7 @@ void FormatArg::initSlow() {
   auto end = fullArgString.end();
 
   // Parse key
-  auto p = static_cast<const char*>(memchr(b, ':', end - b));
+  auto p = static_cast<const char*>(memchr(b, ':', size_t(end - b)));
   if (!p) {
     key_ = StringPiece(b, end);
     return;

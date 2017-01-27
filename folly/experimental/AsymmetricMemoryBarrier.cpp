@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ struct DummyPageCreator {
  private:
   static void* create() {
     auto ptr = mmap(nullptr, 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    checkUnixError(reinterpret_cast<uintptr_t>(ptr), "mmap");
+    checkUnixError(reinterpret_cast<ssize_t>(ptr), "mmap");
 
     // Optimistically try to lock the page so it stays resident. Could make
     // the heavy barrier faster.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ typename std::vector<
         type> inline collectAll(InputIterator first, InputIterator last) {
   typedef typename std::result_of<
       typename std::iterator_traits<InputIterator>::value_type()>::type Result;
-  size_t n = std::distance(first, last);
+  size_t n = size_t(std::distance(first, last));
   std::vector<Result> results;
   std::vector<size_t> order(n);
   results.reserve(n);

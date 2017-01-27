@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,15 @@
  */
 
 #include <folly/json.h>
+
+#include <algorithm>
 #include <cassert>
+#include <functional>
+
 #include <boost/next_prior.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <folly/Conv.h>
-#include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/Unicode.h>
@@ -32,90 +35,6 @@ namespace folly {
 
 namespace json {
 namespace {
-
-char32_t decodeUtf8(
-    const unsigned char*& p,
-    const unsigned char* const e,
-    bool skipOnError) {
-  /* The following encodings are valid, except for the 5 and 6 byte
-   * combinations:
-   * 0xxxxxxx
-   * 110xxxxx 10xxxxxx
-   * 1110xxxx 10xxxxxx 10xxxxxx
-   * 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-   * 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-   * 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-   */
-
-  auto skip = [&] { ++p; return U'\ufffd'; };
-
-  if (p >= e) {
-    if (skipOnError) return skip();
-    throw std::runtime_error("folly::decodeUtf8 empty/invalid string");
-  }
-
-  unsigned char fst = *p;
-  if (!(fst & 0x80)) {
-    // trivial case
-    return *p++;
-  }
-
-  static const uint32_t bitMask[] = {
-    (1 << 7) - 1,
-    (1 << 11) - 1,
-    (1 << 16) - 1,
-    (1 << 21) - 1
-  };
-
-  // upper control bits are masked out later
-  uint32_t d = fst;
-
-  if ((fst & 0xC0) != 0xC0) {
-    if (skipOnError) return skip();
-    throw std::runtime_error(to<std::string>("folly::decodeUtf8 i=0 d=", d));
-  }
-
-  fst <<= 1;
-
-  for (unsigned int i = 1; i != 3 && p + i < e; ++i) {
-    unsigned char tmp = p[i];
-
-    if ((tmp & 0xC0) != 0x80) {
-      if (skipOnError) return skip();
-      throw std::runtime_error(
-        to<std::string>("folly::decodeUtf8 i=", i, " tmp=", (uint32_t)tmp));
-    }
-
-    d = (d << 6) | (tmp & 0x3F);
-    fst <<= 1;
-
-    if (!(fst & 0x80)) {
-      d &= bitMask[i];
-
-      // overlong, could have been encoded with i bytes
-      if ((d & ~bitMask[i - 1]) == 0) {
-        if (skipOnError) return skip();
-        throw std::runtime_error(
-          to<std::string>("folly::decodeUtf8 i=", i, " d=", d));
-      }
-
-      // check for surrogates only needed for 3 bytes
-      if (i == 2) {
-        if ((d >= 0xD800 && d <= 0xDFFF) || d > 0x10FFFF) {
-          if (skipOnError) return skip();
-          throw std::runtime_error(
-            to<std::string>("folly::decodeUtf8 i=", i, " d=", d));
-        }
-      }
-
-      p += i + 1;
-      return d;
-    }
-  }
-
-  if (skipOnError) return skip();
-  throw std::runtime_error("folly::decodeUtf8 encoding length maxed out");
-}
 
 struct Printer {
   explicit Printer(
@@ -195,10 +114,13 @@ private:
     indent();
     newline();
     if (opts_.sort_keys) {
-      std::vector<std::pair<dynamic, dynamic>> items(
-        o.items().begin(), o.items().end());
-      std::sort(items.begin(), items.end());
-      printKVPairs(items.begin(), items.end());
+      using ref = std::reference_wrapper<decltype(o.items())::value_type const>;
+      std::vector<ref> refs(o.items().begin(), o.items().end());
+      std::sort(refs.begin(), refs.end(), [](ref a, ref b) {
+        // Only compare keys.  No ordering among identical keys.
+        return a.get().first < b.get().first;
+      });
+      printKVPairs(refs.cbegin(), refs.cend());
     } else {
       printKVPairs(o.items().begin(), o.items().end());
     }
@@ -565,7 +487,7 @@ std::string decodeUnicodeEscape(Input& in) {
       in.error("expected 4 hex digits");
     }
 
-    uint16_t ret = hexVal(*in) * 4096;
+    uint16_t ret = uint16_t(hexVal(*in) * 4096);
     ++in;
     ret += hexVal(*in) * 256;
     ++in;
@@ -716,7 +638,7 @@ void escapeString(
       if (q == p) {
         // calling utf8_decode has the side effect of
         // checking that utf8 encodings are valid
-        char32_t v = decodeUtf8(q, e, opts.skip_invalid_utf8);
+        char32_t v = utf8ToCodePoint(q, e, opts.skip_invalid_utf8);
         if (opts.skip_invalid_utf8 && v == U'\ufffd') {
           out.append(u8"\ufffd");
           p = q;
@@ -727,7 +649,7 @@ void escapeString(
     if (opts.encode_non_ascii && (*p & 0x80)) {
       // note that this if condition captures utf8 chars
       // with value > 127, so size > 1 byte
-      char32_t v = decodeUtf8(p, e, opts.skip_invalid_utf8);
+      char32_t v = utf8ToCodePoint(p, e, opts.skip_invalid_utf8);
       out.append("\\u");
       out.push_back(hexDigit(uint8_t(v >> 12)));
       out.push_back(hexDigit((v >> 8) & 0x0f));
@@ -747,12 +669,12 @@ void escapeString(
           // note that this if condition captures non readable chars
           // with value < 32, so size = 1 byte (e.g control chars).
           out.append("\\u00");
-          out.push_back(hexDigit((*p & 0xf0) >> 4));
-          out.push_back(hexDigit(*p & 0xf));
+          out.push_back(hexDigit(uint8_t((*p & 0xf0) >> 4)));
+          out.push_back(hexDigit(uint8_t(*p & 0xf)));
           p++;
       }
     } else {
-      out.push_back(*p++);
+      out.push_back(char(*p++));
     }
   }
 

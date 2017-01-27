@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -456,6 +456,13 @@ TEST(FunctionScheduler, AddWithRunOnce) {
   EXPECT_EQ(2, total);
   delay(2);
   EXPECT_EQ(2, total);
+
+  fs.addFunctionOnce([&] { total += 2; }, "add2");
+  delay(1);
+  EXPECT_EQ(4, total);
+  delay(2);
+  EXPECT_EQ(4, total);
+
   fs.shutdown();
 }
 

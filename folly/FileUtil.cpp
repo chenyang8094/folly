@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,9 @@
 #include <folly/detail/FileUtilDetail.h>
 #include <folly/portability/Fcntl.h>
 #include <folly/portability/Sockets.h>
+#include <folly/portability/Stdlib.h>
 #include <folly/portability/SysFile.h>
+#include <folly/portability/SysStat.h>
 
 namespace folly {
 

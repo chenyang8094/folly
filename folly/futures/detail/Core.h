@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,26 +99,6 @@ class Core final {
   // not movable (see comment in the implementation of Future::then)
   Core(Core&&) noexcept = delete;
   Core& operator=(Core&&) = delete;
-
-  // Core is assumed to be convertible only if the type is convertible
-  // and the size is the same. This is a compromise for the complexity
-  // of having to make Core truly have a conversion constructor which
-  // would cause various other problems.
-  // If we made Core move constructible then we would need to update the
-  // Promise and Future with the location of the new Core. This is complex
-  // and may be inefficient.
-  // Core should only be modified so that for size(T) == size(U),
-  // sizeof(Core<T>) == size(Core<U>).
-  // This assumption is used as a proxy to make sure that
-  // the members of Core<T> and Core<U> line up so that we can use a
-  // reinterpret cast.
-  template <
-      class U,
-      typename = typename std::enable_if<std::is_convertible<U, T>::value &&
-                                         sizeof(U) == sizeof(T)>::type>
-  static Core<T>* convert(Core<U>* from) {
-    return reinterpret_cast<Core<T>*>(from);
-  }
 
   /// May call from any thread
   bool hasResult() const {
@@ -376,6 +356,7 @@ class Core final {
     }
 
     if (x) {
+      exception_wrapper ew;
       try {
         if (LIKELY(x->getNumPriorities() == 1)) {
           x->add([core_ref = CountedReference(this)]() mutable {
@@ -394,10 +375,15 @@ class Core final {
             core->callback_(std::move(*core->result_));
           }, priority);
         }
+      } catch (const std::exception& e) {
+        ew = exception_wrapper(std::current_exception(), e);
       } catch (...) {
+        ew = exception_wrapper(std::current_exception());
+      }
+      if (ew) {
         CountedReference core_ref(this);
         RequestContextScopeGuard rctx(context_);
-        result_ = Try<T>(exception_wrapper(std::current_exception()));
+        result_ = Try<T>(std::move(ew));
         SCOPE_EXIT { callback_ = {}; };
         callback_(std::move(*result_));
       }
@@ -417,9 +403,6 @@ class Core final {
     }
   }
 
-  // Core should only be modified so that for size(T) == size(U),
-  // sizeof(Core<T>) == size(Core<U>).
-  // See Core::convert for details.
 
   folly::Function<void(Try<T>&&)> callback_;
   // place result_ next to increase the likelihood that the value will be

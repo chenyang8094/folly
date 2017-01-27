@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -265,7 +265,7 @@ class Optional {
 
   struct StorageTriviallyDestructible {
     // The union trick allows to initialize the Optional's memory,
-    // so that compiler/tools don't complain about unitialized memory,
+    // so that compiler/tools don't complain about uninitialized memory,
     // without actually calling Value's default constructor.
     // The rest of the implementation enforces that hasValue/value are
     // synchronized.

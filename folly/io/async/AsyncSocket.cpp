@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ class AsyncSocket::BytesWriteRequest : public AsyncSocket::WriteRequest {
   WriteResult performWrite() override {
     WriteFlags writeFlags = flags_;
     if (getNext() != nullptr) {
-      writeFlags = writeFlags | WriteFlags::CORK;
+      writeFlags |= WriteFlags::CORK;
     }
     auto writeResult = socket_->performWrite(
         getOps(), getOpCount(), writeFlags, &opsWritten_, &partialBytes_);
@@ -471,6 +471,12 @@ void AsyncSocket::connect(ConnectCallback* callback,
 }
 
 int AsyncSocket::socketConnect(const struct sockaddr* saddr, socklen_t len) {
+#if __linux__
+  if (noTransparentTls_) {
+    // Ignore return value, errors are ok
+    setsockopt(fd_, SOL_SOCKET, SO_NO_TRANSPARENT_TLS, nullptr, 0);
+  }
+#endif
   int rv = fsp::connect(fd_, saddr, len);
   if (rv < 0) {
     auto errnoCopy = errno;
@@ -1300,7 +1306,7 @@ void AsyncSocket::ioReady(uint16_t events) noexcept {
   assert(events & EventHandler::READ_WRITE);
   assert(eventBase_->isInEventBaseThread());
 
-  uint16_t relevantEvents = events & EventHandler::READ_WRITE;
+  uint16_t relevantEvents = uint16_t(events & EventHandler::READ_WRITE);
   if (relevantEvents == EventHandler::READ) {
     handleRead();
   } else if (relevantEvents == EventHandler::WRITE) {
@@ -1421,7 +1427,7 @@ void AsyncSocket::handleRead() noexcept {
             << bytesRead << " bytes";
     if (bytesRead > 0) {
       if (!isBufferMovable_) {
-        readCallback_->readDataAvailable(bytesRead);
+        readCallback_->readDataAvailable(size_t(bytesRead));
       } else {
         CHECK(kOpenSslModeMoveBufferOwnership);
         VLOG(5) << "this=" << this << ", AsyncSocket::handleRead() got "
@@ -1952,7 +1958,8 @@ bool AsyncSocket::updateEventRegistration() {
 
   // Always register for persistent events, so we don't have to re-register
   // after being called back.
-  if (!ioHandler_.registerHandler(eventFlags_ | EventHandler::PERSIST)) {
+  if (!ioHandler_.registerHandler(
+          uint16_t(eventFlags_ | EventHandler::PERSIST))) {
     eventFlags_ = EventHandler::NONE; // we're not registered after error
     AsyncSocketException ex(AsyncSocketException::INTERNAL_ERROR,
         withAddr("failed to update AsyncSocket event registration"));

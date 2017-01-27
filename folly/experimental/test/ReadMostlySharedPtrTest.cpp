@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -333,4 +333,17 @@ TEST_F(ReadMostlySharedPtrTest, nullptr) {
     EXPECT_FALSE(!ptr);
     EXPECT_TRUE(ptr);
   }
+}
+
+TEST_F(ReadMostlySharedPtrTest, getStdShared) {
+  const ReadMostlyMainPtr<int> rmmp1(std::make_shared<int>(42));
+
+  ReadMostlyMainPtr<int> rmmp2;
+  rmmp2.reset(rmmp1.getStdShared());
+
+  const ReadMostlySharedPtr<int> rmsp1 = rmmp1.getShared();
+  ReadMostlySharedPtr<int> rmsp2(rmsp1);
+
+  // No conditions to check; we just wanted to ensure this compiles.
+  SUCCEED();
 }

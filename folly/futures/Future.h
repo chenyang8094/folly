@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,18 +52,6 @@ class Future {
   // movable
   Future(Future&&) noexcept;
   Future& operator=(Future&&) noexcept;
-
-  // conversion constructors
-  template <
-      class U,
-      typename = typename std::enable_if<std::is_convertible<U, T>::value &&
-                                         sizeof(U) == sizeof(T)>::type>
-  /* implicit */ Future(Future<U>&&) noexcept;
-  template <
-      class U,
-      typename = typename std::enable_if<std::is_convertible<U, T>::value &&
-                                         sizeof(U) == sizeof(T)>::type>
-  /* implicit */ Future& operator=(Future<U>&&) noexcept;
 
   /// Construct a Future from a value (perfect forwarding)
   template <class T2 = T, typename =

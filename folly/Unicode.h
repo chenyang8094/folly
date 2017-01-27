@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,14 @@ namespace folly {
  * Return value is undefined if `cp' is an invalid code point.
  */
 std::string codePointToUtf8(char32_t cp);
+
+/*
+ * Decode a single unicode code point from UTF-8 byte sequence.
+ */
+char32_t utf8ToCodePoint(
+    const unsigned char*& p,
+    const unsigned char* const e,
+    bool skipOnError);
 
 //////////////////////////////////////////////////////////////////////
 

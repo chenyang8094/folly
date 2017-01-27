@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <folly/experimental/observer/detail/Core.h>
+
+#include <folly/ExceptionString.h>
 #include <folly/experimental/observer/detail/ObserverManager.h>
 
 namespace folly {

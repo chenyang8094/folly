@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -445,6 +445,7 @@ void FunctionScheduler::runOneFunction(std::unique_lock<std::mutex>& lock,
   }
   if (currentFunction_->runOnce) {
     // Don't reschedule if the function only needed to run once.
+    currentFunction_ = nullptr;
     return;
   }
   // Clear currentFunction_

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,6 +281,13 @@ void AsyncServerSocket::useExistingSockets(const std::vector<int>& fds) {
     SocketAddress address;
     address.setFromLocalAddress(fd);
 
+#if __linux__
+    if (noTransparentTls_) {
+      // Ignore return value, errors are ok
+      setsockopt(fd, SOL_SOCKET, SO_NO_TRANSPARENT_TLS, nullptr, 0);
+    }
+#endif
+
     setupSocket(fd, address.getFamily());
     sockets_.emplace_back(eventBase_, fd, this, address.getFamily());
     sockets_.back().changeHandlerFD(fd);
@@ -298,6 +305,7 @@ void AsyncServerSocket::bindSocket(
   sockaddr_storage addrStorage;
   address.getAddress(&addrStorage);
   sockaddr* saddr = reinterpret_cast<sockaddr*>(&addrStorage);
+
   if (fsp::bind(fd, saddr, address.getActualSize()) != 0) {
     if (!isExistingSocket) {
       closeNoInt(fd);
@@ -306,6 +314,13 @@ void AsyncServerSocket::bindSocket(
         "failed to bind to async server socket: " +
         address.describe());
   }
+
+#if __linux__
+  if (noTransparentTls_) {
+    // Ignore return value, errors are ok
+    setsockopt(fd, SOL_SOCKET, SO_NO_TRANSPARENT_TLS, nullptr, 0);
+  }
+#endif
 
   // If we just created this socket, update the EventHandler and set socket_
   if (!isExistingSocket) {
@@ -414,6 +429,13 @@ void AsyncServerSocket::bind(uint16_t port) {
           " family ",
           SocketAddress::getFamilyNameFrom(res->ai_addr, "<unknown>"));
     }
+
+#if __linux__
+    if (noTransparentTls_) {
+      // Ignore return value, errors are ok
+      setsockopt(s, SOL_SOCKET, SO_NO_TRANSPARENT_TLS, nullptr, 0);
+    }
+#endif
 
     SocketAddress address;
     address.setFromLocalAddress(s);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -159,9 +159,9 @@ class ReadMostlyMainPtr {
     }
   }
 
-  std::shared_ptr<T> getStdShared() {
+  std::shared_ptr<T> getStdShared() const {
     if (impl_) {
-      return impl_->ptr_;
+      return impl_->getShared();
     } else {
       return {};
     }
@@ -320,7 +320,7 @@ class ReadMostlySharedPtr {
 
   std::shared_ptr<T> getStdShared() const {
     if (impl_) {
-      return impl_->ptr_;
+      return impl_->getShared();
     } else {
       return {};
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1277,9 +1277,10 @@ TEST(FBString, testFixedBugs) {
 
     struct {
       std::atomic<size_t> refCount_;
-      char data_[1];
     } dummyRefCounted;
-    EXPECT_EQ(str.capacity(), goodMallocSize(3840) - sizeof(dummyRefCounted));
+    EXPECT_EQ(
+        str.capacity(),
+        goodMallocSize(3840) - sizeof(dummyRefCounted) - sizeof(char));
   }
 }
 

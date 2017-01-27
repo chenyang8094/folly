@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class SkipListNode : private boost::noncopyable {
       height * sizeof(std::atomic<SkipListNode*>);
     auto* node = static_cast<SkipListNode*>(alloc.allocate(size));
     // do placement new
-    new (node) SkipListNode(height, std::forward<U>(data), isHead);
+    new (node) SkipListNode(uint8_t(height), std::forward<U>(data), isHead);
     return node;
   }
 
@@ -117,13 +117,13 @@ class SkipListNode : private boost::noncopyable {
   bool isHeadNode() const       { return getFlags() & IS_HEAD_NODE; }
 
   void setIsHeadNode() {
-    setFlags(getFlags() | IS_HEAD_NODE);
+    setFlags(uint16_t(getFlags() | IS_HEAD_NODE));
   }
   void setFullyLinked() {
-    setFlags(getFlags() | FULLY_LINKED);
+    setFlags(uint16_t(getFlags() | FULLY_LINKED));
   }
   void setMarkedForRemoval() {
-    setFlags(getFlags() | MARKED_FOR_REMOVAL);
+    setFlags(uint16_t(getFlags() | MARKED_FOR_REMOVAL));
   }
 
  private:

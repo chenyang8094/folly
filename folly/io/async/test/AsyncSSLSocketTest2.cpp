@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,9 +197,16 @@ int main(int argc, char *argv[]) {
   signal(SIGPIPE, SIG_IGN);
 #endif
   folly::SSLContext::setSSLLockTypes({
+#ifdef CRYPTO_LOCK_EVP_PKEY
       {CRYPTO_LOCK_EVP_PKEY, folly::SSLContext::LOCK_NONE},
+#endif
+#ifdef CRYPTO_LOCK_SSL_SESSION
       {CRYPTO_LOCK_SSL_SESSION, folly::SSLContext::LOCK_SPINLOCK},
-      {CRYPTO_LOCK_SSL_CTX, folly::SSLContext::LOCK_NONE}});
+#endif
+#ifdef CRYPTO_LOCK_SSL_CTX
+      {CRYPTO_LOCK_SSL_CTX, folly::SSLContext::LOCK_NONE}
+#endif
+  });
   testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   return RUN_ALL_TESTS();

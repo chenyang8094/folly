@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -467,17 +467,10 @@ void testDeprecated() {
     EXPECT_EQ(1001, obj.size());
     EXPECT_EQ(10, obj.back());
     EXPECT_EQ(1000, obj2->size());
-
-    UNSYNCHRONIZED(o) {
-      EXPECT_EQ(1001, o->size());
-    }
   }
 
   SYNCHRONIZED_CONST (obj) {
     EXPECT_EQ(1001, obj.size());
-    UNSYNCHRONIZED(o) {
-      EXPECT_EQ(1001, o->size());
-    }
   }
 
   SYNCHRONIZED (lockedObj, *&obj) {

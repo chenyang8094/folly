@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-#pragma once
+#include <folly/portability/Builtins.h>
 
-#include <stdlib.h>
+#if _WIN32
+#include <folly/portability/Windows.h>
 
-extern "C" {
-#ifndef _WIN32
-extern char** environ;
-#else
-int setenv(const char* name, const char* value, int overwrite);
-int unsetenv(const char* name);
-#endif
+namespace folly {
+namespace portability {
+namespace detail {
+void call_flush_instruction_cache_self_pid(void* begin, size_t size) {
+  FlushInstructionCache(GetCurrentProcess(), begin, size);
 }
+}
+}
+}
+#endif

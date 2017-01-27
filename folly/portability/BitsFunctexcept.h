@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@
 #include <folly/Portability.h>
 FOLLY_NAMESPACE_STD_BEGIN
 
-#if !defined(_LIBCPP_VERSION) || _LIBCPP_VERSION < 3900
+#if (!defined(_LIBCPP_VERSION) || _LIBCPP_VERSION < 4000) && \
+    !defined(FOLLY_SKIP_LIBCPP_4000_THROW_BACKPORTS)
 [[noreturn]] void __throw_length_error(const char* msg);
 [[noreturn]] void __throw_logic_error(const char* msg);
 [[noreturn]] void __throw_out_of_range(const char* msg);

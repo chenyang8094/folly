@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ void RecordIOWriter::write(std::unique_ptr<IOBuf> buf) {
 #endif
 
   checkUnixError(bytes, "pwrite() failed");
-  DCHECK_EQ(bytes, totalLength);
+  DCHECK_EQ(size_t(bytes), totalLength);
 }
 
 RecordIOReader::RecordIOReader(File file, uint32_t fileId)
@@ -84,7 +84,7 @@ RecordIOReader::Iterator::Iterator(ByteRange range, uint32_t fileId, off_t pos)
     range_.clear();
   } else {
     recordAndPos_.second = pos;
-    range_.advance(pos);
+    range_.advance(size_t(pos));
     advanceToValid();
   }
 }

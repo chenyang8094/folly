@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,7 +219,7 @@ struct SizeValidator final : IValidator {
     if (value.type() != type_) {
       return none;
     }
-    if (!Comparison()(size_t(length_), value.size())) {
+    if (!Comparison()(length_, int64_t(value.size()))) {
       return makeError("different length string/array/object", value);
     }
     return none;

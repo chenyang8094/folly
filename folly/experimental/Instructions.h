@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ struct Default {
     return true;
   }
   static FOLLY_ALWAYS_INLINE uint64_t popcount(uint64_t value) {
-    return __builtin_popcountll(value);
+    return uint64_t(__builtin_popcountll(value));
   }
   static FOLLY_ALWAYS_INLINE int ctz(uint64_t value) {
     DCHECK_GT(value, 0u);

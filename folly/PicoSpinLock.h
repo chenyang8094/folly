@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ struct PicoSpinLock {
    */
   void init(IntType initialValue = 0) {
     CHECK(!(initialValue & kLockBitMask_));
-    lock_ = initialValue;
+    lock_ = UIntType(initialValue);
   }
 
   /*
@@ -118,7 +118,7 @@ struct PicoSpinLock {
    */
   void setData(IntType w) {
     CHECK(!(w & kLockBitMask_));
-    lock_ = (lock_ & kLockBitMask_) | w;
+    lock_ = UIntType((lock_ & kLockBitMask_) | w);
   }
 
   /*

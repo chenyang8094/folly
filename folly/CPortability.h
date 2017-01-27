@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,9 +90,10 @@
  * used as folly whitelists some functions.
  */
 #if UNDEFINED_SANITIZER
-# define UBSAN_DISABLE(x) __attribute__((no_sanitize(x)))
+# define FOLLY_DISABLE_UNDEFINED_BEHAVIOR_SANITIZER(x) \
+    __attribute__((no_sanitize(x)))
 #else
-# define UBSAN_DISABLE(x)
+# define FOLLY_DISABLE_UNDEFINED_BEHAVIOR_SANITIZER(x)
 #endif // UNDEFINED_SANITIZER
 
 /**

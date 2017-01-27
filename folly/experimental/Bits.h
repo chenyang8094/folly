@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -242,8 +242,9 @@ inline void Bits<T, Traits>::set(T* p, size_t bitStart, size_t count,
     size_t countInThisBlock = bitsPerBlock - offset;
     size_t countInNextBlock = count - countInThisBlock;
 
-    UnderlyingType thisBlock = value & ((one << countInThisBlock) - 1);
-    UnderlyingType nextBlock = value >> countInThisBlock;
+    UnderlyingType thisBlock =
+        UnderlyingType(value & ((one << countInThisBlock) - 1));
+    UnderlyingType nextBlock = UnderlyingType(value >> countInThisBlock);
     if (std::is_signed<UnderlyingType>::value) {
       nextBlock &= ones(countInNextBlock);
     }

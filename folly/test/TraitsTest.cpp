@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,24 @@
 
 using namespace folly;
 using namespace std;
+
+namespace {
+
+FOLLY_CREATE_HAS_MEMBER_TYPE_TRAITS(has_member_type_x, x);
+}
+
+TEST(Traits, has_member_type) {
+  struct membership_no {};
+  struct membership_yes {
+    using x = void;
+  };
+
+  EXPECT_TRUE((is_same<false_type, has_member_type_x<membership_no>>::value));
+  EXPECT_TRUE((is_same<true_type, has_member_type_x<membership_yes>>::value));
+}
+
+//  Note: FOLLY_CREATE_HAS_MEMBER_FN_TRAITS tests are in
+//  folly/test/HasMemberFnTraitsTest.cpp.
 
 struct T1 {}; // old-style IsRelocatable, below
 struct T2 {}; // old-style IsRelocatable, below
@@ -199,11 +217,22 @@ TEST(Traits, actuallyRelocatable) {
   testIsRelocatable<std::vector<char>>(5, 'g');
 }
 
-struct membership_no {};
-struct membership_yes { using x = void; };
-FOLLY_CREATE_HAS_MEMBER_TYPE_TRAITS(has_member_type_x, x);
+namespace {
+// has_value_type<T>::value is true if T has a nested type `value_type`
+template <class T, class = void>
+struct has_value_type : std::false_type {};
 
-TEST(Traits, has_member_type) {
-  EXPECT_FALSE(bool(has_member_type_x<membership_no>::value));
-  EXPECT_TRUE(bool(has_member_type_x<membership_yes>::value));
+template <class T>
+struct has_value_type<T, folly::void_t<typename T::value_type>>
+    : std::true_type {};
+}
+
+TEST(Traits, void_t) {
+  EXPECT_TRUE((::std::is_same<folly::void_t<>, void>::value));
+  EXPECT_TRUE((::std::is_same<folly::void_t<int>, void>::value));
+  EXPECT_TRUE((::std::is_same<folly::void_t<int, short>, void>::value));
+  EXPECT_TRUE(
+      (::std::is_same<folly::void_t<int, short, std::string>, void>::value));
+  EXPECT_TRUE((::has_value_type<std::string>::value));
+  EXPECT_FALSE((::has_value_type<int>::value));
 }

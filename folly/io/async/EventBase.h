@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/io/async/Request.h>
 #include <folly/io/async/TimeoutManager.h>
-#include <folly/portability/PThread.h>
 #include <glog/logging.h>
 
 #include <event.h>  // libevent
@@ -437,7 +436,7 @@ class EventBase : private boost::noncopyable,
    * called when that latency is exceeded.
    * OBS: This functionality depends on time-measurement.
    */
-  void setMaxLatency(int64_t maxLatency, Func maxLatencyCob) {
+  void setMaxLatency(std::chrono::microseconds maxLatency, Func maxLatencyCob) {
     assert(enableTimeMeasurement_);
     maxLatency_ = maxLatency;
     maxLatencyCob_ = std::move(maxLatencyCob);
@@ -447,7 +446,7 @@ class EventBase : private boost::noncopyable,
    * Set smoothing coefficient for loop load average; # of milliseconds
    * for exp(-1) (1/2.71828...) decay.
    */
-  void setLoadAvgMsec(uint32_t ms);
+  void setLoadAvgMsec(std::chrono::milliseconds ms);
 
   /**
    * reset the load average to a desired value
@@ -466,7 +465,7 @@ class EventBase : private boost::noncopyable,
     * check if the event base loop is running.
    */
   bool isRunning() const {
-    return loopThread_.load(std::memory_order_relaxed) != 0;
+    return loopThread_.load(std::memory_order_relaxed) != std::thread::id();
   }
 
   /**
@@ -484,12 +483,12 @@ class EventBase : private boost::noncopyable,
    */
   bool isInEventBaseThread() const {
     auto tid = loopThread_.load(std::memory_order_relaxed);
-    return tid == 0 || pthread_equal(tid, pthread_self());
+    return tid == std::thread::id() || tid == std::this_thread::get_id();
   }
 
   bool inRunningEventBaseThread() const {
-    return pthread_equal(
-      loopThread_.load(std::memory_order_relaxed), pthread_self());
+    return loopThread_.load(std::memory_order_relaxed) ==
+        std::this_thread::get_id();
   }
 
   HHWheelTimer& timer() {
@@ -519,17 +518,19 @@ class EventBase : private boost::noncopyable,
 
   class SmoothLoopTime {
    public:
-    explicit SmoothLoopTime(uint64_t timeInterval)
-      : expCoeff_(-1.0/timeInterval)
-      , value_(0.0)
-      , oldBusyLeftover_(0) {
+    explicit SmoothLoopTime(std::chrono::microseconds timeInterval)
+        : expCoeff_(-1.0 / timeInterval.count()),
+          value_(0.0),
+          oldBusyLeftover_(0) {
       VLOG(11) << "expCoeff_ " << expCoeff_ << " " << __PRETTY_FUNCTION__;
     }
 
-    void setTimeInterval(uint64_t timeInterval);
+    void setTimeInterval(std::chrono::microseconds timeInterval);
     void reset(double value = 0.0);
 
-    void addSample(int64_t idle, int64_t busy);
+    void addSample(
+        std::chrono::microseconds idle,
+        std::chrono::microseconds busy);
 
     double get() const {
       return value_;
@@ -540,9 +541,9 @@ class EventBase : private boost::noncopyable,
     }
 
    private:
-    double  expCoeff_;
-    double  value_;
-    int64_t oldBusyLeftover_;
+    double expCoeff_;
+    double value_;
+    std::chrono::microseconds oldBusyLeftover_;
   };
 
   void setObserver(const std::shared_ptr<EventBaseObserver>& observer) {
@@ -683,11 +684,8 @@ class EventBase : private boost::noncopyable,
   std::atomic<bool> stop_;
 
   // The ID of the thread running the main loop.
-  // 0 if loop is not running.
-  // Note: POSIX doesn't guarantee that 0 is an invalid pthread_t (or
-  // even that atomic<pthread_t> is valid), but that's how it is
-  // everywhere (at least on Linux, FreeBSD, and OSX).
-  std::atomic<pthread_t> loopThread_;
+  // std::thread::id{} if loop is not running.
+  std::atomic<std::thread::id> loopThread_;
 
   // pointer to underlying event_base class doing the heavy lifting
   event_base* evb_;
@@ -701,7 +699,7 @@ class EventBase : private boost::noncopyable,
   bool loopKeepAliveActive_{false};
 
   // limit for latency in microseconds (0 disables)
-  int64_t maxLatency_;
+  std::chrono::microseconds maxLatency_;
 
   // exponentially-smoothed average loop time for latency-limiting
   SmoothLoopTime avgLoopTime_;
@@ -719,14 +717,10 @@ class EventBase : private boost::noncopyable,
   // be supported: avg loop time, observer and max latency.
   const bool enableTimeMeasurement_;
 
-  // we'll wait this long before running deferred callbacks if the event
-  // loop is idle.
-  static const int kDEFAULT_IDLE_WAIT_USEC = 20000; // 20ms
-
   // Wrap-around loop counter to detect beginning of each loop
   uint64_t nextLoopCnt_;
   uint64_t latestLoopCnt_;
-  uint64_t startWork_;
+  std::chrono::steady_clock::time_point startWork_;
   // Prevent undefined behavior from invoking event_base_loop() reentrantly.
   // This is needed since many projects use libevent-1.4, which lacks commit
   // b557b175c00dc462c1fce25f6e7dd67121d2c001 from

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * @author Eric Niebler (eniebler@fb.com), Sven Over (over@fb.com)
  *
@@ -779,6 +779,10 @@ class FunctionRef<ReturnType(Args...)> final {
 
   ReturnType operator()(Args... args) const {
     return call_(object_, static_cast<Args&&>(args)...);
+  }
+
+  explicit operator bool() const {
+    return object_;
   }
 };
 

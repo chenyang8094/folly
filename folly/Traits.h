@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,10 +36,153 @@
 #include <bits/c++config.h>
 #endif
 
-#include <boost/type_traits.hpp>
-#include <boost/mpl/has_xxx.hpp>
+#define FOLLY_CREATE_HAS_MEMBER_TYPE_TRAITS(classname, type_name)              \
+  template <typename TTheClass_>                                               \
+  struct classname##__folly_traits_impl__ {                                    \
+    template <typename UTheClass_>                                             \
+    static std::true_type test(typename UTheClass_::type_name*);               \
+    template <typename>                                                        \
+    static std::false_type test(...);                                          \
+  };                                                                           \
+  template <typename TTheClass_>                                               \
+  using classname = decltype(                                                  \
+      classname##__folly_traits_impl__<TTheClass_>::template test<TTheClass_>( \
+          nullptr))
+
+#define FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(classname, func_name, cv_qual) \
+  template <typename TTheClass_, typename RTheReturn_, typename... TTheArgs_> \
+  struct classname##__folly_traits_impl__<                                    \
+      TTheClass_,                                                             \
+      RTheReturn_(TTheArgs_...) cv_qual> {                                    \
+    template <                                                                \
+        typename UTheClass_,                                                  \
+        RTheReturn_ (UTheClass_::*)(TTheArgs_...) cv_qual>                    \
+    struct sfinae {};                                                         \
+    template <typename UTheClass_>                                            \
+    static std::true_type test(sfinae<UTheClass_, &UTheClass_::func_name>*);  \
+    template <typename>                                                       \
+    static std::false_type test(...);                                         \
+  }
+
+/*
+ * The FOLLY_CREATE_HAS_MEMBER_FN_TRAITS is used to create traits
+ * classes that check for the existence of a member function with
+ * a given name and signature. It currently does not support
+ * checking for inherited members.
+ *
+ * Such classes receive two template parameters: the class to be checked
+ * and the signature of the member function. A static boolean field
+ * named `value` (which is also constexpr) tells whether such member
+ * function exists.
+ *
+ * Each traits class created is bound only to the member name, not to
+ * its signature nor to the type of the class containing it.
+ *
+ * Say you need to know if a given class has a member function named
+ * `test` with the following signature:
+ *
+ *    int test() const;
+ *
+ * You'd need this macro to create a traits class to check for a member
+ * named `test`, and then use this traits class to check for the signature:
+ *
+ * namespace {
+ *
+ * FOLLY_CREATE_HAS_MEMBER_FN_TRAITS(has_test_traits, test);
+ *
+ * } // unnamed-namespace
+ *
+ * void some_func() {
+ *   cout << "Does class Foo have a member int test() const? "
+ *     << boolalpha << has_test_traits<Foo, int() const>::value;
+ * }
+ *
+ * You can use the same traits class to test for a completely different
+ * signature, on a completely different class, as long as the member name
+ * is the same:
+ *
+ * void some_func() {
+ *   cout << "Does class Foo have a member int test()? "
+ *     << boolalpha << has_test_traits<Foo, int()>::value;
+ *   cout << "Does class Foo have a member int test() const? "
+ *     << boolalpha << has_test_traits<Foo, int() const>::value;
+ *   cout << "Does class Bar have a member double test(const string&, long)? "
+ *     << boolalpha << has_test_traits<Bar, double(const string&, long)>::value;
+ * }
+ *
+ * @author: Marcelo Juchem <marcelo@fb.com>
+ */
+#define FOLLY_CREATE_HAS_MEMBER_FN_TRAITS(classname, func_name)               \
+  template <typename, typename>                                               \
+  struct classname##__folly_traits_impl__;                                    \
+  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(classname, func_name, );             \
+  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(classname, func_name, const);        \
+  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(                                     \
+      classname, func_name, /* nolint */ volatile);                           \
+  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(                                     \
+      classname, func_name, /* nolint */ volatile const);                     \
+  template <typename TTheClass_, typename TTheSignature_>                     \
+  using classname =                                                           \
+      decltype(classname##__folly_traits_impl__<TTheClass_, TTheSignature_>:: \
+                   template test<TTheClass_>(nullptr))
 
 namespace folly {
+
+/***
+ *  _t
+ *
+ *  Instead of:
+ *
+ *    using decayed = typename std::decay<T>::type;
+ *
+ *  With the C++14 standard trait aliases, we could use:
+ *
+ *    using decayed = std::decay_t<T>;
+ *
+ *  Without them, we could use:
+ *
+ *    using decayed = _t<std::decay<T>>;
+ *
+ *  Also useful for any other library with template types having dependent
+ *  member types named `type`, like the standard trait types.
+ */
+template <typename T>
+using _t = typename T::type;
+
+/**
+ *  void_t
+ *
+ *  A type alias for `void`. `void_t` is useful for controling class-template
+ *  partial specialization.
+ *
+ *  Example:
+ *
+ *    // has_value_type<T>::value is true if T has a nested type `value_type`
+ *    template <class T, class = void>
+ *    struct has_value_type
+ *        : std::false_type {};
+ *
+ *    template <class T>
+ *    struct has_value_type<T, folly::void_t<typename T::value_type>>
+ *        : std::true_type {};
+ */
+#if defined(__cpp_lib_void_t) || defined(_MSC_VER)
+
+/* using override */ using std::void_t;
+
+#else // defined(__cpp_lib_void_t) || defined(_MSC_VER)
+
+namespace traits_detail {
+template <class...>
+struct void_t_ {
+  using type = void;
+};
+} // namespace traits_detail
+
+template <class... Ts>
+using void_t = _t<traits_detail::void_t_<Ts...>>;
+
+#endif // defined(__cpp_lib_void_t) || defined(_MSC_VER)
 
 /**
  * IsRelocatable<T>::value describes the ability of moving around
@@ -91,7 +234,7 @@ namespace folly {
 namespace traits_detail {
 
 #define FOLLY_HAS_TRUE_XXX(name)                                             \
-  BOOST_MPL_HAS_XXX_TRAIT_DEF(name)                                          \
+  FOLLY_CREATE_HAS_MEMBER_TYPE_TRAITS(has_##name, name);                     \
   template <class T>                                                         \
   struct name##_is_true : std::is_same<typename T::name, std::true_type> {}; \
   template <class T>                                                         \
@@ -252,29 +395,12 @@ using StrictConjunction =
   struct IsRelocatable<  __VA_ARGS__ > : std::true_type {};
 
 /**
- * Use this macro ONLY inside namespace boost. When using it with a
- * regular type, use it like this:
- *
- * // Make sure you're at namespace ::boost scope
- * template<> FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(MyType)
- *
- * When using it with a template type, use it like this:
- *
- * // Make sure you're at namespace ::boost scope
- * template<class T1, class T2>
- * FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(MyType<T1, T2>)
- */
-#define FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(...) \
-  struct has_nothrow_constructor<  __VA_ARGS__ > : ::boost::true_type {};
-
-/**
- * The FOLLY_ASSUME_FBVECTOR_COMPATIBLE* macros below encode two
- * assumptions: first, that the type is relocatable per IsRelocatable
- * above, and that it has a nothrow constructor. Most types can be
- * assumed to satisfy both conditions, but it is the responsibility of
- * the user to state that assumption. User-defined classes will not
- * work with fbvector (see FBVector.h) unless they state this
- * combination of properties.
+ * The FOLLY_ASSUME_FBVECTOR_COMPATIBLE* macros below encode the
+ * assumption that the type is relocatable per IsRelocatable
+ * above. Many types can be assumed to satisfy this condition, but
+ * it is the responsibility of the user to state that assumption.
+ * User-defined classes will not be optimized for use with
+ * fbvector (see FBVector.h) unless they state that assumption.
  *
  * Use FOLLY_ASSUME_FBVECTOR_COMPATIBLE with regular types like this:
  *
@@ -293,40 +419,35 @@ using StrictConjunction =
  */
 
 // Use this macro ONLY at global level (no namespace)
-#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE(...)                           \
-  namespace folly { template<> FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__) }   \
-  namespace boost { \
-  template<> FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(__VA_ARGS__) }
+#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE(...) \
+  namespace folly {                           \
+  template <>                                 \
+  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__)       \
+  }
 // Use this macro ONLY at global level (no namespace)
-#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_1(...)                         \
-  namespace folly {                                                     \
-  template <class T1> FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1>) }       \
-    namespace boost {                                                   \
-    template <class T1> FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(__VA_ARGS__<T1>) }
+#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_1(...) \
+  namespace folly {                             \
+  template <class T1>                           \
+  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1>)     \
+  }
 // Use this macro ONLY at global level (no namespace)
-#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_2(...)                 \
-  namespace folly {                                             \
-  template <class T1, class T2>                                 \
-  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1, T2>) }               \
-    namespace boost {                                           \
-    template <class T1, class T2>                               \
-    FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(__VA_ARGS__<T1, T2>) }
+#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_2(...) \
+  namespace folly {                             \
+  template <class T1, class T2>                 \
+  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1, T2>) \
+  }
 // Use this macro ONLY at global level (no namespace)
-#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_3(...)                         \
-  namespace folly {                                                     \
-  template <class T1, class T2, class T3>                               \
-  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1, T2, T3>) }                   \
-    namespace boost {                                                   \
-    template <class T1, class T2, class T3>                             \
-    FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(__VA_ARGS__<T1, T2, T3>) }
+#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_3(...)     \
+  namespace folly {                                 \
+  template <class T1, class T2, class T3>           \
+  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1, T2, T3>) \
+  }
 // Use this macro ONLY at global level (no namespace)
-#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_4(...)                         \
-  namespace folly {                                                     \
-  template <class T1, class T2, class T3, class T4>                     \
-  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1, T2, T3, T4>) }               \
-    namespace boost {                                                   \
-    template <class T1, class T2, class T3, class T4>                   \
-    FOLLY_ASSUME_HAS_NOTHROW_CONSTRUCTOR(__VA_ARGS__<T1, T2, T3, T4>) }
+#define FOLLY_ASSUME_FBVECTOR_COMPATIBLE_4(...)         \
+  namespace folly {                                     \
+  template <class T1, class T2, class T3, class T4>     \
+  FOLLY_ASSUME_RELOCATABLE(__VA_ARGS__<T1, T2, T3, T4>) \
+  }
 
 /**
  * Instantiate FOLLY_ASSUME_FBVECTOR_COMPATIBLE for a few types. It is
@@ -364,18 +485,6 @@ template <class T>
   class shared_ptr;
 
 FOLLY_NAMESPACE_STD_END
-
-namespace boost {
-
-template <class T> class shared_ptr;
-
-template <class T, class U>
-struct has_nothrow_constructor< std::pair<T, U> >
-    : std::integral_constant<bool,
-        has_nothrow_constructor<T>::value &&
-        has_nothrow_constructor<U>::value> {};
-
-} // namespace boost
 
 namespace folly {
 
@@ -582,8 +691,8 @@ constexpr initlist_construct_t initlist_construct{};
 
 // Assume nothing when compiling with MSVC.
 #ifndef _MSC_VER
-// gcc-5.0 changed string's implementation in libgcc to be non-relocatable
-#if __GNUC__ < 5
+// gcc-5.0 changed string's implementation in libstdc++ to be non-relocatable
+#if !_GLIBCXX_USE_CXX11_ABI
 FOLLY_ASSUME_FBVECTOR_COMPATIBLE_3(std::basic_string)
 #endif
 FOLLY_ASSUME_FBVECTOR_COMPATIBLE_2(std::vector)
@@ -592,92 +701,7 @@ FOLLY_ASSUME_FBVECTOR_COMPATIBLE_2(std::deque)
 FOLLY_ASSUME_FBVECTOR_COMPATIBLE_2(std::unique_ptr)
 FOLLY_ASSUME_FBVECTOR_COMPATIBLE_1(std::shared_ptr)
 FOLLY_ASSUME_FBVECTOR_COMPATIBLE_1(std::function)
-
-// Boost
-FOLLY_ASSUME_FBVECTOR_COMPATIBLE_1(boost::shared_ptr)
 #endif
-
-#define FOLLY_CREATE_HAS_MEMBER_TYPE_TRAITS(classname, type_name) \
-  template <typename T> \
-  struct classname { \
-    template <typename C> \
-    constexpr static bool test(typename C::type_name*) { return true; } \
-    template <typename> \
-    constexpr static bool test(...) { return false; } \
-    constexpr static bool value = test<T>(nullptr); \
-  }
-
-#define FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(classname, func_name, cv_qual) \
-  template <typename TTheClass_, typename RTheReturn_, typename... TTheArgs_> \
-  class classname<TTheClass_, RTheReturn_(TTheArgs_...) cv_qual> { \
-    template < \
-      typename UTheClass_, RTheReturn_ (UTheClass_::*)(TTheArgs_...) cv_qual \
-    > struct sfinae {}; \
-    template <typename UTheClass_> \
-    constexpr static bool test(sfinae<UTheClass_, &UTheClass_::func_name>*) \
-    { return true; } \
-    template <typename> \
-    constexpr static bool test(...) { return false; } \
-  public: \
-    constexpr static bool value = test<TTheClass_>(nullptr); \
-  }
-
-/*
- * The FOLLY_CREATE_HAS_MEMBER_FN_TRAITS is used to create traits
- * classes that check for the existence of a member function with
- * a given name and signature. It currently does not support
- * checking for inherited members.
- *
- * Such classes receive two template parameters: the class to be checked
- * and the signature of the member function. A static boolean field
- * named `value` (which is also constexpr) tells whether such member
- * function exists.
- *
- * Each traits class created is bound only to the member name, not to
- * its signature nor to the type of the class containing it.
- *
- * Say you need to know if a given class has a member function named
- * `test` with the following signature:
- *
- *    int test() const;
- *
- * You'd need this macro to create a traits class to check for a member
- * named `test`, and then use this traits class to check for the signature:
- *
- * namespace {
- *
- * FOLLY_CREATE_HAS_MEMBER_FN_TRAITS(has_test_traits, test);
- *
- * } // unnamed-namespace
- *
- * void some_func() {
- *   cout << "Does class Foo have a member int test() const? "
- *     << boolalpha << has_test_traits<Foo, int() const>::value;
- * }
- *
- * You can use the same traits class to test for a completely different
- * signature, on a completely different class, as long as the member name
- * is the same:
- *
- * void some_func() {
- *   cout << "Does class Foo have a member int test()? "
- *     << boolalpha << has_test_traits<Foo, int()>::value;
- *   cout << "Does class Foo have a member int test() const? "
- *     << boolalpha << has_test_traits<Foo, int() const>::value;
- *   cout << "Does class Bar have a member double test(const string&, long)? "
- *     << boolalpha << has_test_traits<Bar, double(const string&, long)>::value;
- * }
- *
- * @author: Marcelo Juchem <marcelo@fb.com>
- */
-#define FOLLY_CREATE_HAS_MEMBER_FN_TRAITS(classname, func_name) \
-  template <typename, typename> class classname; \
-  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(classname, func_name, ); \
-  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL(classname, func_name, const); \
-  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL( \
-      classname, func_name, /* nolint */ volatile); \
-  FOLLY_CREATE_HAS_MEMBER_FN_TRAITS_IMPL( \
-      classname, func_name, /* nolint */ volatile const)
 
 /* Some combinations of compilers and C++ libraries make __int128 and
  * unsigned __int128 available but do not correctly define their standard type

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Facebook, Inc.
+ * Copyright 2017 Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,13 @@ TEST(make_unique, compatible_with_std_make_unique) {
 
   using namespace std;
   make_unique<string>("hello, world");
+}
+
+TEST(to_weak_ptr, example) {
+  auto s = std::make_shared<int>(17);
+  EXPECT_EQ(1, s.use_count());
+  EXPECT_EQ(2, (to_weak_ptr(s).lock(), s.use_count())) << "lvalue";
+  EXPECT_EQ(3, (to_weak_ptr(decltype(s)(s)).lock(), s.use_count())) << "rvalue";
 }
 
 TEST(allocate_sys_buffer, compiles) {

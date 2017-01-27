@@ -44,6 +44,7 @@ nobase_follyinclude_HEADERS = \
 	CachelinePadded.h \
 	CallOnce.h \
 	Checksum.h \
+	Chrono.h \
 	ClockGettimeWrappers.h \
 	ConcurrentSkipList.h \
 	ConcurrentSkipList-inl.h \
@@ -60,7 +61,6 @@ nobase_follyinclude_HEADERS = \
 	detail/CachelinePaddedImpl.h \
 	detail/ChecksumDetail.h \
 	detail/DiscriminatedPtrDetail.h \
-	detail/ExceptionWrapper.h \
 	detail/FileUtilDetail.h \
 	detail/FingerprintPolynomial.h \
 	detail/Futex.h \
@@ -250,6 +250,7 @@ nobase_follyinclude_HEADERS = \
 	io/async/test/MockTimeoutManager.h \
 	io/async/test/ScopedBoundPort.h \
 	io/async/test/SocketPair.h \
+	io/async/test/TestSSLServer.h \
 	io/async/test/TimeUtil.h \
 	io/async/test/UndelayedDestruction.h \
 	io/async/test/Util.h \
@@ -285,7 +286,6 @@ nobase_follyinclude_HEADERS = \
 	portability/Config.h \
 	portability/Constexpr.h \
 	portability/Dirent.h \
-	portability/Environment.h \
 	portability/Event.h \
 	portability/Fcntl.h \
 	portability/GFlags.h \
@@ -296,6 +296,7 @@ nobase_follyinclude_HEADERS = \
 	portability/Malloc.h \
 	portability/Math.h \
 	portability/Memory.h \
+	portability/OpenSSL.h \
 	portability/PThread.h \
 	portability/Sockets.h \
 	portability/Stdio.h \
@@ -337,8 +338,8 @@ nobase_follyinclude_HEADERS = \
 	SpookyHashV1.h \
 	SpookyHashV2.h \
 	ssl/OpenSSLHash.h \
+	ssl/OpenSSLVersionFinder.h \
 	ssl/SSLSession.h \
-	ssl/detail/OpenSSLVersionFinder.h \
 	ssl/detail/SSLSessionImpl.h \
 	stats/BucketedTimeSeries-defs.h \
 	stats/BucketedTimeSeries.h \
@@ -373,9 +374,11 @@ nobase_follyinclude_HEADERS = \
 	Try.h \
 	Unicode.h \
 	Function.h \
+	UncaughtExceptions.h \
 	Unit.h \
 	Uri.h \
 	Uri-inl.h \
+	Utility.h \
 	Varint.h \
 	VersionCheck.h
 
@@ -471,11 +474,11 @@ libfolly_la_SOURCES = \
 	MacAddress.cpp \
 	MemoryMapping.cpp \
 	portability/Dirent.cpp \
-	portability/Environment.cpp \
 	portability/Fcntl.cpp \
 	portability/Libgen.cpp \
 	portability/Malloc.cpp \
 	portability/Memory.cpp \
+	portability/OpenSSL.cpp \
 	portability/Sockets.cpp \
 	portability/Stdio.cpp \
 	portability/Stdlib.cpp \

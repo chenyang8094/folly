@@ -47,6 +47,8 @@ using std::chrono::milliseconds;
 using std::chrono::microseconds;
 using std::chrono::duration_cast;
 
+using namespace std::chrono_literals;
+
 using namespace folly;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1563,7 +1565,7 @@ class IdleTimeTimeoutSeries : public AsyncTimeout {
  */
 TEST(EventBaseTest, IdleTime) {
   EventBase eventBase;
-  eventBase.setLoadAvgMsec(1000);
+  eventBase.setLoadAvgMsec(1000ms);
   eventBase.resetLoadAvg(5900.0);
   std::deque<uint64_t> timeouts0(4, 8080);
   timeouts0.push_front(8000);
@@ -1576,7 +1578,7 @@ TEST(EventBaseTest, IdleTime) {
   bool hostOverloaded = false;
 
   int latencyCallbacks = 0;
-  eventBase.setMaxLatency(6000, [&]() {
+  eventBase.setMaxLatency(6000us, [&]() {
     ++latencyCallbacks;
     if (latencyCallbacks != 1) {
       FAIL() << "Unexpected latency callback";
