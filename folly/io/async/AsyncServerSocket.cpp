@@ -321,26 +321,27 @@ void AsyncServerSocket::bind(const SocketAddress& address) {
   // Don't set socket_ yet, so that socket_ will remain uninitialized if an
   // error occurs.
   int fd;
+  // 如果事件处理器为0，说明这个socket上还没有事件处理器
   if (sockets_.size() == 0) {
+    //  创建一个socket
     fd = createSocket(address.getFamily());
-  } else if (sockets_.size() == 1) {
+  } else if (sockets_.size() == 1) {// 有一个事件处理器
     if (address.getFamily() != sockets_[0].addressFamily_) {
       throw std::invalid_argument(
                                 "Attempted to bind address to socket with "
                                 "different address family");
     }
+    // 获取事件处理器对应的fd
     fd = sockets_[0].socket_;
   } else {
     throw std::invalid_argument(
                               "Attempted to bind to multiple fds");
   }
 
-  bindSocket(fd, address, !sockets_.empty());
+  bindSocket(fd, address, !sockets_.empty());// 第三个参数为是都已经存在的socket
 }
 
-void AsyncServerSocket::bind(
-    const std::vector<IPAddress>& ipAddresses,
-    uint16_t port) {
+void AsyncServerSocket::bind(const std::vector<IPAddress>& ipAddresses,uint16_t port) {
   if (ipAddresses.empty()) {
     throw std::invalid_argument("No ip addresses were provided");
   }
@@ -351,8 +352,9 @@ void AsyncServerSocket::bind(
 
   for (const IPAddress& ipAddress : ipAddresses) {
     SocketAddress address(ipAddress.toFullyQualified(), port);
+    // 创建一份新的socket
     int fd = createSocket(address.getFamily());
-
+    // 绑定
     bindSocket(fd, address, false);
   }
   if (sockets_.size() == 0) {
@@ -626,29 +628,34 @@ void AsyncServerSocket::removeAcceptCallback(AcceptCallback *callback,
   }
 }
 
+// 开始accept
 void AsyncServerSocket::startAccepting() {
   assert(eventBase_ == nullptr || eventBase_->isInEventBaseThread());
-
+  // 正在监听
   accepting_ = true;
+  // 如果该socket上面没有回调函数，就直接返回，不进行accept
   if (callbacks_.empty()) {
     // We can't actually begin accepting if no callbacks are defined.
     // Wait until a callback is added to start accepting.
     return;
   }
 
+  // 遍历所有的事件处理器
   for (auto& handler : sockets_) {
-    if (!handler.registerHandler(
-          EventHandler::READ | EventHandler::PERSIST)) {
+    // 向libevent注册持久的read事件
+    if (!handler.registerHandler(EventHandler::READ | EventHandler::PERSIST)) {
       throw std::runtime_error("failed to register for accept events");
     }
   }
 }
 
+// 暂停accept
 void AsyncServerSocket::pauseAccepting() {
   assert(eventBase_ == nullptr || eventBase_->isInEventBaseThread());
+  // 没有监听
   accepting_ = false;
   for (auto& handler : sockets_) {
-   handler. unregisterHandler();
+   handler. unregisterHandler();// 取消注册的事件
   }
 
   // If we were in the accept backoff state, disable the backoff timeout
@@ -742,6 +749,8 @@ void AsyncServerSocket::setupSocket(int fd, int family) {
   }
 }
 
+
+// 事件就绪时，会被libevent回调
 void AsyncServerSocket::handlerReady(uint16_t /* events */,
                                      int fd,
                                      sa_family_t addressFamily) noexcept {
@@ -847,8 +856,7 @@ void AsyncServerSocket::handlerReady(uint16_t /* events */,
   }
 }
 
-void AsyncServerSocket::dispatchSocket(int socket,
-                                        SocketAddress&& address) {
+void AsyncServerSocket::dispatchSocket(int socket, SocketAddress&& address) {
   uint32_t startingIndex = callbackIndex_;
 
   // Short circuit if the callback is in the primary EventBase thread
@@ -1014,8 +1022,7 @@ void AsyncServerSocket::backoffTimeoutExpired() {
 
   // Register the handler.
   for (auto& handler : sockets_) {
-    if (!handler.registerHandler(
-          EventHandler::READ | EventHandler::PERSIST)) {
+    if (!handler.registerHandler(EventHandler::READ | EventHandler::PERSIST)) {
       // We're hosed.  We could just re-schedule backoffTimeout_ to
       // re-try again after a little bit.  However, we don't want to
       // loop retrying forever if we can't re-enable accepts.  Just

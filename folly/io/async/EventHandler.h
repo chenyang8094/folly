@@ -31,7 +31,7 @@ namespace folly {
 class EventBase;
 
 /**
- * The EventHandler class is used to asynchronously wait for events on a file
+ * The EventHandler class is used to asynchronously(异步) wait for events on a file
  * descriptor.
  *
  * Users that wish to wait on I/O events should derive from EventHandler and

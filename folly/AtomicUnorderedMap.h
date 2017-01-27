@@ -38,9 +38,9 @@ namespace folly {
 
 /// You're probably reading this because you are looking for an
 /// AtomicUnorderedMap<K,V> that is fully general, highly concurrent (for
-/// reads, writes, and iteration), and makes no performance compromises.
+/// reads, writes, and iteration), and makes no performance compromises(妥协).
 /// We haven't figured that one out yet.  What you will find here is a
-/// hash table implementation that sacrifices generality so that it can
+/// hash table implementation that sacrifices generality（牺牲通用性） so that it can
 /// give you all of the other things.
 ///
 /// LIMITATIONS:
@@ -66,7 +66,7 @@ namespace folly {
 ///
 /// WHAT YOU GET IN EXCHANGE:
 ///
-/// * Arbitrary key and value types - any K and V that can be used in a
+/// * Arbitrary（任意） key and value types - any K and V that can be used in a
 ///   std::unordered_map can be used here.  In fact, the key and value
 ///   types don't even have to be copyable or moveable!
 ///
@@ -74,12 +74,12 @@ namespace folly {
 ///   pointers or references to the keys and values in the map, because
 ///   they are never moved or destroyed (until the map itself is destroyed).
 ///
-/// * Iterators are never invalidated - writes don't invalidate iterators,
-///   so you can scan and insert in parallel.
+/// * Iterators are never invalidated（失效） - writes don't invalidate iterators,
+///   so you can scan and insert in parallel（并行）.
 ///
 /// * Fast wait-free reads - reads are usually only a single cache miss,
 ///   even when the hash table is very large.  Wait-freedom means that
-///   you won't see latency outliers even in the face of concurrent writes.
+///   you won't see latency outliers（旧的异常值） even in the face of concurrent writes.
 ///
 /// * Lock-free insert - writes proceed in parallel.  If a thread in the
 ///   middle of a write is unlucky and gets suspended, it doesn't block
@@ -87,7 +87,7 @@ namespace folly {
 ///
 /// COMMENTS ON INSERT-ONLY
 ///
-/// This map provides wait-free linearizable reads and lock-free
+/// This map provides wait-free linearizable（线性话） reads and lock-free
 /// linearizable inserts.  Inserted values won't be moved, but no
 /// concurrency control is provided for safely updating them.  To remind
 /// you of that fact they are only provided in const form.  This is the
@@ -95,12 +95,12 @@ namespace folly {
 /// std::map iteration form, which requires that iteration be exposed
 /// via std::pair (and prevents encapsulation of access to the value).
 ///
-/// There are a couple of reasonable policies for doing in-place
+/// There are a couple （一对）of reasonable policies for doing in-place
 /// concurrency control on the values.  I am hoping that the policy can
 /// be injected via the value type or an extra template param, to keep
 /// the core AtomicUnorderedInsertMap insert-only:
 ///
-///   CONST: this is the currently implemented strategy, which is simple,
+///   CONST: this is the currently implemented strategy（战略）, which is simple,
 ///   performant, and not that expressive.  You can always put in a value
 ///   with a mutable field (see MutableAtom below), but that doesn't look
 ///   as pretty as it should.

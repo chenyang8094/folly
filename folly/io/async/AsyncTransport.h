@@ -33,7 +33,7 @@ constexpr bool kOpenSslModeMoveBufferOwnership =
 #else
   false
 #endif
-;
+  ;
 
 namespace folly {
 
@@ -68,7 +68,7 @@ enum class WriteFlags : uint32_t {
  */
 inline WriteFlags operator|(WriteFlags a, WriteFlags b) {
   return static_cast<WriteFlags>(
-    static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+           static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
 /*
@@ -76,7 +76,7 @@ inline WriteFlags operator|(WriteFlags a, WriteFlags b) {
  */
 inline WriteFlags operator&(WriteFlags a, WriteFlags b) {
   return static_cast<WriteFlags>(
-    static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+           static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 }
 
 /*
@@ -102,34 +102,23 @@ inline bool isSet(WriteFlags a, WriteFlags b) {
 
 
 /**
- * AsyncTransport defines an asynchronous API for streaming I/O.
- *
- * This class provides an API to for asynchronously waiting for data
- * on a streaming transport, and for asynchronously sending data.
- *
- * The APIs for reading and writing are intentionally asymmetric.  Waiting for
- * data to read is a persistent API: a callback is installed, and is notified
- * whenever new data is available.  It continues to be notified of new events
- * until it is uninstalled.
- *
- * AsyncTransport does not provide read timeout functionality, because it
- * typically cannot determine when the timeout should be active.  Generally, a
- * timeout should only be enabled when processing is blocked waiting on data
- * from the remote endpoint.  For server-side applications, the timeout should
- * not be active if the server is currently processing one or more outstanding
- * requests on this transport.  For client-side applications, the timeout
- * should not be active if there are no requests pending on the transport.
- * Additionally, if a client has multiple pending requests, it will ususally
- * want a separate timeout for each request, rather than a single read timeout.
- *
- * The write API is fairly intuitive: a user can request to send a block of
- * data, and a callback will be informed once the entire block has been
- * transferred to the kernel, or on error.  AsyncTransport does provide a send
- * timeout, since most callers want to give up if the remote end stops
- * responding and no further progress can be made sending the data.
+  AsyncTransport为I/O流定义了一个异步API。
+
+  这个类提供了一个API来在流传输上异步等待数据，以及用于异步发送数据。
+
+  用于读取和写入的API是有意不对称的。 等待要读取的数据是一个持久性API：已安装的回调，
+   每当有新数据可用时被通知， 它继续被通知新事件直到它被卸载。
+
+  AsyncTransport不提供读超时功能，因为它通常无法确定何时应该启用超时。 一般来说，一个超时
+  应该仅在处理等待数据被远程端点阻止时启用。对于服务器端应用程序，超时不应该被启用，如果服务器当前正
+  在处理一个或多个未完成的请求。 对于客户端应用程序，超时不应该被激活，如果在传输上没有有待处理的请求。
+  此外，如果客户端有多个挂起的请求，它将通常需要为每个请求单独设置超时，而不是单个读取超时。
+
+  写API是相当直观的：用户可以请求发送一个块数据，并且一旦整个块已经被传输到内核或者出错就将通知回调
+   。AsyncTransport提供了一个发送超时，因为如果远程端停止并且不能进一步发送数据，大多数调用者想要放弃，。
  */
 class AsyncTransport : public DelayedDestruction, public AsyncSocketBase {
- public:
+public:
   typedef std::unique_ptr<AsyncTransport, Destructor> UniquePtr;
 
   /**
@@ -346,7 +335,7 @@ class AsyncTransport : public DelayedDestruction, public AsyncSocketBase {
   virtual size_t getRawBytesReceived() const = 0;
 
   class BufferCallback {
-   public:
+  public:
     virtual ~BufferCallback() {}
     virtual void onEgressBuffered() = 0;
     virtual void onEgressBufferCleared() = 0;
@@ -358,7 +347,7 @@ class AsyncTransport : public DelayedDestruction, public AsyncSocketBase {
    * protocols.
    */
   class ReplaySafetyCallback {
-   public:
+  public:
     virtual ~ReplaySafetyCallback() = default;
 
     /**
@@ -384,60 +373,51 @@ class AsyncTransport : public DelayedDestruction, public AsyncSocketBase {
     }
   }
 
- protected:
+protected:
   virtual ~AsyncTransport() = default;
 };
 
 class AsyncReader {
- public:
+public:
   class ReadCallback {
-   public:
+  public:
     virtual ~ReadCallback() = default;
 
     /**
-     * When data becomes available, getReadBuffer() will be invoked to get the
-     * buffer into which data should be read.
-     *
-     * This method allows the ReadCallback to delay buffer allocation until
-     * data becomes available.  This allows applications to manage large
-     * numbers of idle connections, without having to maintain a separate read
-     * buffer for each idle connection.
-     *
-     * It is possible that in some cases, getReadBuffer() may be called
-     * multiple times before readDataAvailable() is invoked.  In this case, the
-     * data will be written to the buffer returned from the most recent call to
-     * readDataAvailable().  If the previous calls to readDataAvailable()
-     * returned different buffers, the ReadCallback is responsible for ensuring
-     * that they are not leaked.
-     *
-     * If getReadBuffer() throws an exception, returns a nullptr buffer, or
-     * returns a 0 length, the ReadCallback will be uninstalled and its
-     * readError() method will be invoked.
-     *
-     * getReadBuffer() is not allowed to change the transport state before it
-     * returns.  (For example, it should never uninstall the read callback, or
-     * set a different read callback.)
-     *
-     * @param bufReturn getReadBuffer() should update *bufReturn to contain the
-     *                  address of the read buffer.  This parameter will never
-     *                  be nullptr.
-     * @param lenReturn getReadBuffer() should update *lenReturn to contain the
-     *                  maximum number of bytes that may be written to the read
-     *                  buffer.  This parameter will never be nullptr.
+      当数据变得可用时，getReadBuffer（）将被调用来获取缓冲器，用来存放读取数据。
+
+      此方法允许ReadCallback延迟缓冲区分配，直到数据可用。 这允许应用程序管理大
+          空闲连接的数量，而不必为每个空闲连接保持单独的读取缓冲区。
+
+      在某些情况下，在readDataAvailable（）被调用之前getReadBuffer（）可能会调用多次。 在这种情况下，
+      数据将被写入从最近一次调用返回的缓冲区。 如果以前调用getReadBuffer（）返回不同的缓冲区，
+      ReadCallback负责确保他们不泄漏。
+
+
+      If getReadBuffer() throws an exception, returns a nullptr buffer, or
+      returns a 0 length, the ReadCallback will be uninstalled and its
+      readError() method will be invoked.
+
+      getReadBuffer() is not allowed to change the transport state before it
+      returns.  (For example, it should never uninstall the read callback, or
+      set a different read callback.)
+
+      @param bufReturn getReadBuffer() should update *bufReturn to contain the
+                       address of the read buffer.  This parameter will never
+                       be nullptr.
+      @param lenReturn getReadBuffer() should update *lenReturn to contain the
+                       maximum number of bytes that may be written to the read
+                       buffer.  This parameter will never be nullptr.
      */
     virtual void getReadBuffer(void** bufReturn, size_t* lenReturn) = 0;
 
     /**
-     * readDataAvailable() will be invoked when data has been successfully read
-     * into the buffer returned by the last call to getReadBuffer().
-     *
-     * The read callback remains installed after readDataAvailable() returns.
-     * It must be explicitly uninstalled to stop receiving read events.
-     * getReadBuffer() will be called at least once before each call to
-     * readDataAvailable().  getReadBuffer() will also be called before any
-     * call to readEOF().
-     *
-     * @param len       The number of bytes placed in the buffer.
+      readDataAvailable（）将在数据被成功读取进由最后一次调用getReadBuffer（）返回的缓冲区时被调用。
+       readDataAvailable（）返回后，读回调将保持安装。必须明确地卸载它才能停止接收读取事件。
+       getReadBuffer（）将在每次调用readDataAvailable（）之前至少被调用一次。
+       getReadBuffer（）也将在任何调用readEOF（）之前被调用。
+
+      @param len       The number of bytes placed in the buffer.
      */
 
     virtual void readDataAvailable(size_t len) noexcept = 0;
@@ -493,7 +473,7 @@ class AsyncReader {
      */
 
     virtual void readBufferAvailable(std::unique_ptr<IOBuf> /*readBuf*/)
-      noexcept {}
+    noexcept {}
 
     /**
      * readEOF() will be invoked when the transport is closed.
@@ -519,14 +499,14 @@ class AsyncReader {
   virtual void setReadCB(ReadCallback* callback) = 0;
   virtual ReadCallback* getReadCallback() const = 0;
 
- protected:
+protected:
   virtual ~AsyncReader() = default;
 };
 
 class AsyncWriter {
- public:
+public:
   class WriteCallback {
-   public:
+  public:
     virtual ~WriteCallback() = default;
 
     /**
@@ -561,16 +541,16 @@ class AsyncWriter {
                           std::unique_ptr<IOBuf>&& buf,
                           WriteFlags flags = WriteFlags::NONE) = 0;
 
- protected:
+protected:
   virtual ~AsyncWriter() = default;
 };
 
-// Transitional intermediate interface. This is deprecated.
+// Transitional intermediate interface. This is deprecated(废弃).
 // Wrapper around folly::AsyncTransport, that includes read/write callbacks
 class AsyncTransportWrapper : virtual public AsyncTransport,
-                              virtual public AsyncReader,
-                              virtual public AsyncWriter {
- public:
+  virtual public AsyncReader,
+  virtual public AsyncWriter {
+public:
   using UniquePtr = std::unique_ptr<AsyncTransportWrapper, Destructor>;
 
   // Alias for inherited members from AsyncReader and AsyncWriter
@@ -616,7 +596,7 @@ class AsyncTransportWrapper : virtual public AsyncTransport,
   template <class T>
   T* getUnderlyingTransport() {
     return const_cast<T*>(static_cast<const AsyncTransportWrapper*>(this)
-        ->getUnderlyingTransport<T>());
+                          ->getUnderlyingTransport<T>());
   }
 
   /**

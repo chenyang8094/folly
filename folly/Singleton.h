@@ -14,42 +14,32 @@
  * limitations under the License.
  */
 
-// SingletonVault - a library to manage the creation and destruction
-// of interdependent singletons.
+
+// SingletonVault - 一个管理相互依赖的单例的创建和销毁的库。
 //
-// Basic usage of this class is very simple; suppose you have a class
-// called MyExpensiveService, and you only want to construct one (ie,
-// it's a singleton), but you only want to construct it if it is used.
-//
+// 这个类的基本用法很简单; 假设你有一个叫做MyExpensiveService的类
+// ，你只想构造一个（即它是一个单例），但你只想它被使用的时候才构造它。
+
 // In your .h file:
 // class MyExpensiveService { ... };
 //
 // In your .cpp file:
-// namespace { folly::Singleton<MyExpensiveService> the_singleton; }
+// namespace { folly::Singleton<MyExpensiveService> the_singleton; }  注意是在全局空间定义
 //
 // Code can access it via:
 //
 // MyExpensiveService* instance = Singleton<MyExpensiveService>::get();
 // or
-// std::weak_ptr<MyExpensiveService> instance =
-//     Singleton<MyExpensiveService>::get_weak();
+// std::weak_ptr<MyExpensiveService> instance = Singleton<MyExpensiveService>::get_weak();
 //
-// You also can directly access it by the variable defining the
-// singleton rather than via get(), and even treat that variable like
-// a smart pointer (dereferencing it or using the -> operator).
+//你也可以通过定义的单例变量直接访问它而不是通过get()，甚至像智能指针一样对待那个变量（解除引用或使用->运算符）。
 //
-// Please note, however, that all non-weak_ptr interfaces are
-// inherently subject to races with destruction.  Use responsibly.
-//
-// The singleton will be created on demand.  If the constructor for
-// MyExpensiveService actually makes use of *another* Singleton, then
-// the right thing will happen -- that other singleton will complete
-// construction before get() returns.  However, in the event of a
-// circular dependency, a runtime error will occur.
-//
-// You can have multiple singletons of the same underlying type, but
-// each must be given a unique tag. If no tag is specified - default tag is used
-//
+// 单例将根据需要创建。 如果构造函数为MyExpensiveService实际上使用另一个Singleton，然后
+// 正确的事情会发生 - 其他singleton将在get()返回之前完成构造。 然而，在循环依赖的情况下
+// ，将发生运行时错误。
+
+// 您可以拥有具有相同类型的多个单例，但是每个都必须给出一个唯一的标签。 如果未指定标记 - 将使用默认标记
+
 // namespace {
 // struct Tag1 {};
 // struct Tag2 {};
@@ -62,11 +52,12 @@
 // MyExpensiveService* svc1 = s1.get();
 // MyExpensiveService* svc2 = s2.get();
 //
-// By default, the singleton instance is constructed via new and
-// deleted via delete, but this is configurable:
-//
-// namespace { folly::Singleton<MyExpensiveService> the_singleton(create,
-//                                                                destroy); }
+
+// 默认情况下，单例实例通过new进行构造，通过delete进行删除，但这是可配置的：
+
+// namespace { 
+//   folly::Singleton<MyExpensiveService> the_singleton(create,destroy); 
+// }
 //
 // Where create and destroy are functions, Singleton<T>::CreateFunc
 // Singleton<T>::TeardownFunc.
@@ -80,13 +71,10 @@
 // Make your singleton like this:
 //   folly::Singleton<X> singleton_x([]() { return new X(42, "foo"); });
 //
-// The above examples detail a situation where an expensive singleton is loaded
-// on-demand (thus only if needed).  However if there is an expensive singleton
-// that will likely be needed, and initialization takes a potentially long time,
-// e.g. while initializing, parsing some files, talking to remote services,
-// making uses of other singletons, and so on, the initialization of those can
-// be scheduled up front, or "eagerly".
-//
+// 上面的例子详细说明了按需（也就是只有在需要时）加载昂贵的单例的情况。但是如果有一个昂贵的单例
+// 可能需要，并且初始化需要很长的时间，例如初始化时，解析一些文件，与远程服务通信，使用其他单例，等等，
+// 这种情况下可以把初始化安排在前面。
+
 // In that case the singleton can be declared this way:
 //
 // namespace {
@@ -95,20 +83,14 @@
 //     .shouldEagerInit();
 // }
 //
-// This way the singleton's instance is built at program initialization,
-// if the program opted-in to that feature by calling "doEagerInit" or
-// "doEagerInitVia" during its startup.
+
+// 这样，singleton的实例在程序初始化时构建，如果程序通过调用“doEagerInit”或选择加入该功能
+// “doEagerInitVia”。
 //
-// What if you need to destroy all of your singletons?  Say, some of
-// your singletons manage threads, but you need to fork?  Or your unit
-// test wants to clean up all global state?  Then you can call
-// SingletonVault::singleton()->destroyInstances(), which invokes the
-// TeardownFunc for each singleton, in the reverse order they were
-// created.  It is your responsibility to ensure your singletons can
-// handle cases where the singletons they depend on go away, however.
-// Singletons won't be recreated after destroyInstances call. If you
-// want to re-enable singleton creation (say after fork was called) you
-// should call reenableInstances.
+// 如果你想销毁所有的单例？ 比如，一些你的单例管理线程，但你需要fork？ 或你的单元测试想清理所有全局状态？ 
+// 这时你可以调用SingletonVault::singleton()->destroyInstances()，它将按照与创建时的相反的顺序调用
+// 每个singleton的TeardownFunc函数。你的责任是确保你的单例可以处理他们依赖的单例离开的情况。
+// 单例不会在destroyInstances调用后重新创建。 如果你想重新启用单例创建（或者说fork调用之后）你应该调用reenableInstances。
 
 #pragma once
 #include <folly/Baton.h>
@@ -145,27 +127,24 @@
 
 namespace folly {
 
-// For actual usage, please see the Singleton<T> class at the bottom
-// of this file; that is what you will actually interact with.
+// 对于实际使用，请参见文件底部的Singleton <T>类; 这就是你实际上会与之互动的类。
 
-// SingletonVault is the class that manages singleton instances.  It
-// is unaware of the underlying types of singletons, and simply
-// manages lifecycles and invokes CreateFunc and TeardownFunc when
-// appropriate.  In general, you won't need to interact with the
-// SingletonVault itself.
+// SingletonVault是管理单例实例的类。 它不知道单例的底层类型，它只是简单的
+// 进行生命周期管理并在适当的时候调用CreateFunc和TeardownFunc函数。 一般来说，你不需要与SingletonVault本身
+// 之交互。
 //
 // A vault goes through a few stages of life:
 //
 //   1. Registration phase; singletons can be registered:
-//      a) Strict: no singleton can be created in this stage.
-//      b) Relaxed: singleton can be created (the default vault is Relaxed).
+//      a) Strict（严格的）: no singleton can be created in this stage.
+//      b) Relaxed（宽松的）: singleton can be created (the default vault is Relaxed).
 //   2. registrationComplete() has been called; singletons can no
 //      longer be registered, but they can be created.
 //   3. A vault can return to stage 1 when destroyInstances is called.
 //
-// In general, you don't need to worry about any of the above; just
-// ensure registrationComplete() is called near the top of your main()
-// function, otherwise no singletons can be instantiated.
+
+// 一般来说，你不需要担心上述任何的任何阶段; 你只要确保registrationComplete（）在进入你的main（）
+// 函数之前被调用，否则没有单例可以实例化。
 
 class SingletonVault;
 
@@ -177,14 +156,14 @@ struct DefaultTag {};
 // a combinaiton of the type and of the optional name, and is used as
 // a key in unordered_maps.
 class TypeDescriptor {
- public:
+public:
   TypeDescriptor(const std::type_info& ti,
                  const std::type_info& tag_ti)
-      : ti_(ti), tag_ti_(tag_ti) {
+    : ti_(ti), tag_ti_(tag_ti) {
   }
 
   TypeDescriptor(const TypeDescriptor& other)
-      : ti_(other.ti_), tag_ti_(other.tag_ti_) {
+    : ti_(other.ti_), tag_ti_(other.tag_ti_) {
   }
 
   TypeDescriptor& operator=(const TypeDescriptor& other) {
@@ -211,23 +190,23 @@ class TypeDescriptor {
     return ti_ == other.ti_ && tag_ti_ == other.tag_ti_;
   }
 
- private:
+private:
   std::type_index ti_;
   std::type_index tag_ti_;
 };
 
 class TypeDescriptorHasher {
- public:
+public:
   size_t operator()(const TypeDescriptor& ti) const {
     return folly::hash::hash_combine(ti.ti_, ti.tag_ti_);
   }
 };
 
-// This interface is used by SingletonVault to interact with SingletonHolders.
+// This interface is used by SingletonVault to interact（相互作用） with SingletonHolders.
 // Having a non-template interface allows SingletonVault to keep a list of all
 // SingletonHolders.
 class SingletonHolderBase {
- public:
+public:
   explicit SingletonHolderBase(TypeDescriptor typeDesc) : type_(typeDesc) {}
   virtual ~SingletonHolderBase() = default;
 
@@ -240,7 +219,7 @@ class SingletonHolderBase {
   virtual void preDestroyInstance(ReadMostlyMainPtrDeleter<>&) = 0;
   virtual void destroyInstance() = 0;
 
- private:
+private:
   TypeDescriptor type_;
 };
 
@@ -249,7 +228,7 @@ class SingletonHolderBase {
 // functions.
 template <typename T>
 struct SingletonHolder : public SingletonHolderBase {
- public:
+public:
   typedef std::function<void(T*)> TeardownFunc;
   typedef std::function<T*(void)> CreateFunc;
 
@@ -269,7 +248,7 @@ struct SingletonHolder : public SingletonHolderBase {
   virtual void preDestroyInstance(ReadMostlyMainPtrDeleter<>&) override;
   virtual void destroyInstance() override;
 
- private:
+private:
   SingletonHolder(TypeDescriptor type, SingletonVault& vault);
 
   enum class SingletonHolderState {
@@ -321,7 +300,7 @@ struct SingletonHolder : public SingletonHolderBase {
 }
 
 class SingletonVault {
- public:
+public:
   enum class Type {
     Strict, // Singletons can't be created before registrationComplete()
     Relaxed, // Singletons can be created before registrationComplete()
@@ -441,9 +420,9 @@ class SingletonVault {
   // Gets singleton vault for any Tag. Non-default tag should be used in unit
   // tests only.
   template <typename VaultTag = detail::DefaultTag>
-  static SingletonVault* singleton() {
+  static SingletonVault * singleton() {
     /* library-local */ static auto vault =
-        detail::createGlobal<SingletonVault, VaultTag>();
+      detail::createGlobal<SingletonVault, VaultTag>();
     return vault;
   }
 
@@ -459,7 +438,7 @@ class SingletonVault {
     type_ = type;
   }
 
- private:
+private:
   template <typename T>
   friend struct detail::SingletonHolder;
 
@@ -478,9 +457,9 @@ class SingletonVault {
   // (registered but never created), living (CreateFunc returned an instance).
 
   static void stateCheck(
-      SingletonVaultState expected,
-      const State& state,
-      const char* msg = "Unexpected singleton state change") {
+    SingletonVaultState expected,
+    const State& state,
+    const char* msg = "Unexpected singleton state change") {
     if (expected != state.state) {
       throw std::logic_error(msg);
     }
@@ -500,8 +479,8 @@ class SingletonVault {
   static void scheduleDestroyInstances();
 
   typedef std::unordered_map<detail::TypeDescriptor,
-                             detail::SingletonHolderBase*,
-                             detail::TypeDescriptorHasher> SingletonMap;
+          detail::SingletonHolderBase*,
+          detail::TypeDescriptorHasher> SingletonMap;
   folly::Synchronized<SingletonMap> singletons_;
   folly::Synchronized<std::unordered_set<detail::SingletonHolderBase*>>
       eagerInitSingletons_;
@@ -516,7 +495,7 @@ class SingletonVault {
 };
 
 // This is the wrapper class that most users actually interact with.
-// It allows for simple access to registering and instantiating
+// It allows for simple access to registering and instantiating（实例化）
 // singletons.  Create instances of this class in the global scope of
 // type Singleton<T> to register your singleton for later access via
 // Singleton<T>::try_get().
@@ -524,7 +503,7 @@ template <typename T,
           typename Tag = detail::DefaultTag,
           typename VaultTag = detail::DefaultTag /* for testing */>
 class Singleton {
- public:
+public:
   typedef std::function<T*(void)> CreateFunc;
   typedef std::function<void(T*)> TeardownFunc;
 
@@ -536,12 +515,12 @@ class Singleton {
 
   // If, however, you do need to hold a reference to the specific
   // singleton, you can try to do so with a weak_ptr.  Avoid this when
-  // possible but the inability to lock the weak pointer can be a
+  // possible but the inability（无力） to lock the weak pointer can be a
   // signal that the vault has been destroyed.
   FOLLY_DEPRECATED("Replaced by try_get")
   static std::weak_ptr<T> get_weak() { return getEntry().get_weak(); }
 
-  // Preferred alternative to get_weak, it returns shared_ptr that can be
+  // Preferred alternative （首选替代方案）to get_weak, it returns shared_ptr that can be
   // stored; a singleton won't be destroyed unless shared_ptr is destroyed.
   // Avoid holding these shared_ptrs beyond the scope of a function;
   // don't put them in member variables, always use try_get() instead
@@ -558,7 +537,7 @@ class Singleton {
 
   explicit Singleton(std::nullptr_t /* _ */ = nullptr,
                      typename Singleton::TeardownFunc t = nullptr)
-      : Singleton([]() { return new T; }, std::move(t)) {}
+    : Singleton([]() { return new T; }, std::move(t)) {}
 
   explicit Singleton(typename Singleton::CreateFunc c,
                      typename Singleton::TeardownFunc t = nullptr) {
@@ -621,16 +600,16 @@ class Singleton {
     entry.registerSingletonMock(c, getTeardownFunc(t));
   }
 
- private:
+private:
   inline static detail::SingletonHolder<T>& getEntry() {
     return detail::SingletonHolder<T>::template singleton<Tag, VaultTag>();
   }
 
   // Construct TeardownFunc.
   static typename detail::SingletonHolder<T>::TeardownFunc getTeardownFunc(
-      TeardownFunc t)  {
+    TeardownFunc t)  {
     if (t == nullptr) {
-      return  [](T* v) { delete v; };
+      return  [](T * v) { delete v; };
     } else {
       return t;
     }
@@ -639,7 +618,7 @@ class Singleton {
 
 template <typename T, typename Tag = detail::DefaultTag>
 class LeakySingleton {
- public:
+public:
   using CreateFunc = std::function<T*()>;
 
   LeakySingleton() : LeakySingleton([] { return new T(); }) {}
@@ -657,7 +636,7 @@ class LeakySingleton {
 
   static T& get() { return instance(); }
 
- private:
+private:
   enum class State { NotRegistered, Dead, Living };
 
   struct Entry {

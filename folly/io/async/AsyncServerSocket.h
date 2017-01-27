@@ -797,6 +797,7 @@ class AsyncServerSocket : public DelayedDestruction
     return info;
   }
 
+  // 异步的事件处理器
   struct ServerEventHandler : public EventHandler {
     ServerEventHandler(EventBase* eventBase, int socket,
                        AsyncServerSocket* parent,
@@ -808,7 +809,7 @@ class AsyncServerSocket : public DelayedDestruction
         , addressFamily_(addressFamily) {}
 
     ServerEventHandler(const ServerEventHandler& other)
-    : EventHandler(other.eventBase_, other.socket_)
+    : EventHandler(other.eventBase_, other.socket_)// 调用父类构造器，fd为other.socket_
     , eventBase_(other.eventBase_)
     , socket_(other.socket_)
     , parent_(other.parent_)
@@ -829,19 +830,20 @@ class AsyncServerSocket : public DelayedDestruction
       return *this;
     }
 
-    // Inherited from EventHandler
+    // Inherited（继承） from EventHandler
+    // 事件准备就绪时
     virtual void handlerReady(uint16_t events) noexcept {
       parent_->handlerReady(events, socket_, addressFamily_);
     }
 
     EventBase* eventBase_;
-    int socket_;
+    int socket_;// socket句柄描述符
     AsyncServerSocket* parent_;
     sa_family_t addressFamily_;
   };
 
   EventBase *eventBase_;
-  std::vector<ServerEventHandler> sockets_;
+  std::vector<ServerEventHandler> sockets_;// 事件处理器集合，每一个事件处理器会监听一个资源描述符的事件
   std::vector<int> pendingCloseSockets_;
   bool accepting_;
   uint32_t maxAcceptAtOnce_;

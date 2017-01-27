@@ -23,7 +23,7 @@
 namespace folly {
 
 /**
- * Class representing a URI.
+ * Class representing（代表） a URI.
  *
  * Consider http://www.facebook.com/foo/bar?key=foo#anchor
  *
@@ -41,7 +41,7 @@ namespace folly {
 class Uri {
  public:
   /**
-   * Parse a Uri from a string.  Throws std::invalid_argument on parse error.
+   * Parse a Uri from a string.  Throws std::invalid_ argument on parse error.
    */
   explicit Uri(StringPiece str);
 
