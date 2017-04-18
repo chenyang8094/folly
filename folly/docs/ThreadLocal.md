@@ -14,13 +14,11 @@ Improved thread local storage for non-trivial types.
 ***
 
 The API of `ThreadLocalPtr` is very close to `boost::thread_specific_ptr` with
-the notable addition of the `accessAllThreads` method.  There is also a
-`ThreadLocal` class which is a thin wrapper around `ThreadLocalPtr` that manages
-allocation automatically (creates a new object the first time it is dereferenced
-from each thread).
+the notable(著名的) addition of the `accessAllThreads` method.  There is also a
+`ThreadLocal` class which is a thin wrapper around `ThreadLocalPtr` that manages allocation automatically (creates a new object the first time it is dereferenced(废弃)from each thread).
 
 `ThreadLocalPtr` simply gives you a place to put and access a pointer local to
-each thread such that it will be destroyed appropriately.
+each thread such that it will be destroyed appropriately(适当地).
 
 ```Cpp
 {
@@ -48,23 +46,17 @@ patterns such as counters.  Note that you must specify a unique Tag type so you
 don't block other ThreadLocal object usage, and you should try to minimize the
 lifetime of the accessor so the lock is held for as short as possible).
 
-The following example is a simplification of `folly/ThreadCachedInt.h`.  It
-keeps track of a counter value and allows multiple threads to add to the count
-without synchronization.  In order to get the total count, `read()` iterates
-through all the thread local values via `accessAllThreads()` and sums them up.
-`class NewTag` is used to break the global mutex so that this class won't block
-other `ThreadLocal` usage when `read()` is called.
+The following example is a simplification(单纯的) of `folly/ThreadCachedInt.h`.  It keeps track of a counter value and allows multiple threads to add to the count without synchronization.  In order to get the total count, `read()` iterates through all the thread local values via `accessAllThreads()` and sums them up.`class NewTag` is used to break the global mutex so that this class won't block other `ThreadLocal` usage when `read()` is called.
 
 Note that `read()` holds the global mutex which blocks construction,
 destruction, and `read()` for other `SimpleThreadCachedInt`'s, but does not
-block `add()`.  Also, since it uses the unique `NewTag`, `SimpleThreadCachedInt`
-does not affect other `ThreadLocal` usage.
+block `add()`.  Also, since it uses the unique `NewTag`, `SimpleThreadCachedInt`does not affect other `ThreadLocal` usage.
 
 ```Cpp
 class SimpleThreadCachedInt {
 
-  class NewTag;  // Segments the global mutex
-  ThreadLocal<int,NewTag> val_;
+  class NewTag;  // Segments(片段) the global mutex
+  ThreadLocal<int,NewTag> val_;//
 
  public:
   void add(int val) {
@@ -73,7 +65,7 @@ class SimpleThreadCachedInt {
 
   int read() {
     int ret = 0;
-    // accessAllThreads acquires the global lock
+    // accessAllThreads acquires(获取) the global lock
     for (const auto& i : val_.accessAllThreads()) {
       ret += i;
     }  // Global lock is released on scope exit

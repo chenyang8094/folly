@@ -6,7 +6,7 @@ includedir=${prefix}/include
 Name: libfolly
 Description: Facebook (Folly) C++ library
 Version: 0.57
-Requires.private:  gflags libglog openssl libevent
-Libs.private: -lboost_context-mt -lboost_program_options-mt -lboost_thread-mt -lboost_filesystem -lboost_system -lboost_regex-mt -lpthread -lboost_chrono-mt    -llzma -lz -lsnappy -llz4  -ldouble-conversion  -lgflags
+Requires:  gflags libglog openssl libevent
+Libs.private: -lboost_context-mt -lboost_program_options-mt -lboost_thread-mt -lboost_filesystem -lboost_system -lboost_regex-mt -lpthread -lboost_chrono-mt    -llzma -lz -lsnappy -llz4  -ldouble-conversion  
 Libs: -L${libdir} -lfolly
 Cflags: -I${includedir} -std=gnu++1y

@@ -2,14 +2,13 @@
 ----------------------
 
 `folly/Synchronized.h` introduces a simple abstraction for mutex-
-based concurrency. It replaces convoluted, unwieldy, and just
-plain wrong code with simple constructs that are easy to get
+based concurrency（并发性）. It replaces convoluted(复杂的), unwieldy(笨重的), and just plain wrong code with simple constructs that are easy to get
 right and difficult to get wrong.
 
-### Motivation
+### Motivation（动机）
 
 Many of our multithreaded C++ programs use shared data structures
-associated with locks. This follows the time-honored adage of
+associated with locks. This follows the time-honored(历史悠久) adage(格言) of
 mutex-based concurrency control "associate mutexes with data, not code".
 Consider the following example:
 
@@ -37,17 +36,14 @@ writing. For example:
     void RequestHandler::processRequest(const Request& request) {
       stop_watch<> watch;
       checkRequestValidity(request);
-      SharedMutex::WriteHolder lock(requestQueueMutex_);
+      SharedMutex::WriteHolder lock(requestQueueMutex_);// 上锁
       requestQueue_.push_back(request);
       stats_->addStatValue("requestEnqueueLatency", watch.elapsed());
       LOG(INFO) << "enqueued request ID " << request.getID();
     }
 ```
 
-However, the correctness of the technique is entirely predicated on
-convention.  Developers manipulating these data members must take care
-to explicitly acquire the correct lock for the data they wish to access.
-There is no ostensible error for code that:
+However, the correctness（正确性） of the technique(技巧) is entirely(完全) predicated on convention.  Developers manipulating(手动) these data members must take care to explicitly acquire the correct lock for the data they wish to access. There is no ostensible error for code that:
 
 * manipulates a piece of data without acquiring its lock first
 * acquires a different lock instead of the intended one

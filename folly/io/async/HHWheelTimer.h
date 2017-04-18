@@ -64,7 +64,7 @@ class HHWheelTimer : private folly::AsyncTimeout,
   }
 
   /**
-   * A callback to be notified when a timeout has expired.
+   * A callback to be notified when a timeout has expired(到期).
    */
   class Callback
       : public boost::intrusive::list_base_hook<

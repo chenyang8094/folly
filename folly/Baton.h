@@ -28,7 +28,7 @@
 namespace folly {
 
 /// A Baton allows a thread to block once and be awoken: it captures
-/// a single handoff.  During its lifecycle (from construction/reset to
+/// a single handoff(切换).  During its lifecycle (from construction/reset to
 /// destruction/reset) a baton must either be post()ed and wait()ed exactly
 /// once each, or not at all.
 ///

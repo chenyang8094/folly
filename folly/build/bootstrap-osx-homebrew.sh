@@ -38,7 +38,7 @@ export_flags() {
 }
 
 # now the fun part
-install_deps
+# install_deps
 export_flags
 autoreconf -ivf
 ./configure --disable-silent-rules --disable-dependency-tracking
